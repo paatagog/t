@@ -1,7 +1,0 @@
-sudo apt install qemu-kvm libvirt-daemon-system virtinst libvirt-clients bridge-utils
-sudo systemctl enable libvirtd
-sudo systemctl start libvirtd
-sudo systemctl status libvirtd
-
-sudo usermod -aG kvm $USER
-sudo usermod -aG libvirt $USER
