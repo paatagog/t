@@ -1,0 +1,8 @@
+sudo apt update
+sudo apt upgrade
+sudo apt install virtualbox
+sudo apt install virtualbox-ext-pack
+
+
+apt install p7zip-full
+7z x <file-name> -o<target-folder>
