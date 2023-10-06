@@ -1,5 +1,5 @@
 
 
-$\color{red}{\text{145}}$, (001011 $\color{red}{\text{10}}$, 
+$\color{red}{\text{145}}$, (001011$\color{red}{\text{10}}$, 
 
 Suppose that first pixel of dog picture is ($\color{red}{\text{145}}$, $\color{green}{\text{156}}$, $\color{blue}{\text{165}}$). In binary, we will have ($\color{red}{\text{10010001}}$, $\color{green}{\text{10011100}}$, $\color{blue}{\text{10100101}}$). We can hide these numbers if we slightly modify several pixels colors in cat picture. "Slightly" means that the modification will not be noticeable by human eye. Let's take 4 pixels in cat image and modify only last 2 digits of each pixels' colors. Here are cats' pixels (00101100, 00110001, 00111000) (00100010, 00100110, 00101100) (00011111, 00100001, 00101010) (00100001,  00100100, 00101110) and here are modified numbers for cat pixels (001011$\color{red}{\text{10}}$, 001100$\color{red}{\text{01}}$, 001110$\color{red}{\text{00}}$) (001000$\color{red}{\text{01}}$, 001001$\color{green}{\text{10}}$, 001011$\color{green}{\text{01}}$) (000111$\color{green}{\text{11}}$, 001000$\color{green}{\text{00}}$, 001010$\color{blue}{\text{10}}$) (001000$\color{blue}{\text{10}}$,  001001$\color{blue}{\text{01}}$, 001011$\color{blue}{\text{01}}$).
