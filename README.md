@@ -1,7 +1,7 @@
 ### This repository is intented only for technical purposes
 
 per<br/>
-#### https://meet.google.com/fsq-gmmg-xot
+### https://meet.google.com/fsq-gmmg-xot
 
 pub<br/>
 https://meet.google.com/haw-qunt-uqe
