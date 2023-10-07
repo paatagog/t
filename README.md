@@ -1,6 +1,6 @@
 ### This repository is intented only for technical purposes
 
-### https://meet.google.com/fsq-gmmg-xot
+### [ლექცია](https://meet.google.com/fsq-gmmg-xot)
 
 pub<br/>
 https://meet.google.com/haw-qunt-uqe
