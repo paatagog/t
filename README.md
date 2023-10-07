@@ -1,6 +1,5 @@
 ### This repository is intented only for technical purposes
 
-per
 ### https://meet.google.com/fsq-gmmg-xot
 
 pub<br/>
