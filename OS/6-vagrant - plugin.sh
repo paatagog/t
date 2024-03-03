@@ -1,1 +1,0 @@
-sudo vagrant plugin install vagrant-reload
