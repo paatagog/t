@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ეგზოპლანეტის აღმოჩენა — AI დემო</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Noto+Sans+Georgian:wght@300;400;600;700;900&display=swap');
+
+  :root {
+    --bg-deep: #0a0e1a;
+    --bg-panel: #111827;
+    --bg-card: #1a2236;
+    --accent-blue: #3b82f6;
+    --accent-cyan: #06b6d4;
+    --accent-purple: #8b5cf6;
+    --transit-red: #ef4444;
+    --transit-glow: #f87171;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-dim: #475569;
+    --star-gold: #fbbf24;
+    --success-green: #10b981;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    font-family: 'Noto Sans Georgian', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Starfield background */
+  .starfield {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .star {
+    position: absolute;
+    border-radius: 50%;
+    background: white;
+    animation: twinkle var(--dur) ease-in-out infinite;
+  }
+
+  @keyframes twinkle {
+    0%, 100% { opacity: var(--min-o); }
+    50% { opacity: var(--max-o); }
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 30px 40px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+
+  .header h1 {
+    font-size: 2.2rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue), var(--accent-purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+  }
+
+  .header .subtitle {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    font-weight: 300;
+  }
+
+  /* Transit diagram */
+  .transit-visual {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 28px;
+    padding: 20px;
+    position: relative;
+  }
+
+  .star-body {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 40%, #fff7c2, var(--star-gold), #d97706);
+    box-shadow: 0 0 60px rgba(251, 191, 36, 0.4), 0 0 120px rgba(251, 191, 36, 0.15);
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .planet-orbit {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 180px;
+    height: 180px;
+    margin-top: -90px;
+    margin-left: -90px;
+    border: 1px dashed rgba(255,255,255,0.1);
+    border-radius: 50%;
+  }
+
+  .planet-body {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #64748b, #1e293b);
+    box-shadow: 0 0 10px rgba(100, 116, 139, 0.5);
+    position: absolute;
+    animation: orbit-planet 6s linear infinite;
+  }
+
+  @keyframes orbit-planet {
+    0% { top: -8px; left: 82px; }
+    25% { top: 82px; left: 172px; }
+    50% { top: 172px; left: 82px; }
+    75% { top: 82px; left: -8px; }
+    100% { top: -8px; left: 82px; }
+  }
+
+  .transit-explain {
+    max-width: 420px;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.7;
+  }
+
+  .transit-explain strong {
+    color: var(--star-gold);
+    font-weight: 600;
+  }
+
+  /* Chart area */
+  .chart-section {
+    background: var(--bg-panel);
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 28px 32px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .chart-section::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent-cyan), var(--accent-blue), transparent);
+    opacity: 0.5;
+  }
+
+  .chart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .chart-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
+
+  .chart-badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    padding: 4px 12px;
+    border-radius: 20px;
+    background: rgba(59, 130, 246, 0.15);
+    color: var(--accent-blue);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+  }
+
+  canvas {
+    width: 100%;
+    height: 260px;
+    display: block;
+    border-radius: 8px;
+    background: rgba(0,0,0,0.3);
+  }
+
+  .axis-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+  }
+
+  .y-label {
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: rotate(-90deg) translateX(50%);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 28px;
+  }
+
+  .btn {
+    font-family: 'Noto Sans Georgian', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    padding: 14px 32px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-challenge {
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+    color: white;
+    box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+  }
+
+  .btn-challenge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 30px rgba(59, 130, 246, 0.45);
+  }
+
+  .btn-ai {
+    background: linear-gradient(135deg, var(--transit-red), #dc2626);
+    color: white;
+    box-shadow: 0 4px 20px rgba(239, 68, 68, 0.3);
+    opacity: 0.4;
+    pointer-events: none;
+    transition: all 0.4s ease;
+  }
+
+  .btn-ai.active {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .btn-ai.active:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 30px rgba(239, 68, 68, 0.45);
+  }
+
+  .btn-reset {
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .btn-reset:hover {
+    background: rgba(255,255,255,0.08);
+  }
+
+  /* Noise slider */
+  .slider-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .slider-label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-weight: 400;
+    min-width: 120px;
+    text-align: right;
+  }
+
+  .slider-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--accent-cyan);
+    min-width: 36px;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 240px;
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple));
+    outline: none;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: white;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  }
+
+  /* Result message */
+  .result-msg {
+    text-align: center;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    font-size: 0.95rem;
+    line-height: 1.7;
+    display: none;
+  }
+
+  .result-msg.human {
+    display: block;
+    background: rgba(251, 191, 36, 0.08);
+    border: 1px solid rgba(251, 191, 36, 0.2);
+    color: var(--star-gold);
+  }
+
+  .result-msg.ai-found {
+    display: block;
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    color: var(--transit-glow);
+    animation: fadeInUp 0.5s ease;
+  }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Stats bar */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--bg-card);
+    border-radius: 12px;
+    padding: 16px 20px;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .stat-card .val {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--accent-cyan);
+  }
+
+  .stat-card .label {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  /* How it works section */
+  .how-section {
+    background: var(--bg-panel);
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 24px 28px;
+  }
+
+  .how-section h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: var(--accent-cyan);
+  }
+
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+
+  .step {
+    padding: 16px;
+    background: rgba(0,0,0,0.25);
+    border-radius: 10px;
+    border-left: 3px solid var(--accent-purple);
+  }
+
+  .step-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent-purple);
+    margin-bottom: 6px;
+  }
+
+  .step-text {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .container { padding: 20px; }
+    .header h1 { font-size: 1.5rem; }
+    .transit-visual { flex-direction: column; }
+    .stats-bar, .steps { grid-template-columns: 1fr; }
+    canvas { height: 200px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="starfield" id="starfield"></div>
+
+<div class="container">
+  <div class="header">
+    <h1>🔭 ეგზოპლანეტის აღმოჩენა — ადამიანი vs AI</h1>
+    <div class="subtitle">ტრანზიტის მეთოდი — შეგიძლია პლანეტა იპოვო?</div>
+  </div>
+
+  <div class="transit-visual">
+    <div class="star-body">
+      <div class="planet-orbit">
+        <div class="planet-body"></div>
+      </div>
+    </div>
+    <div class="transit-explain">
+      როცა პლანეტა ვარსკვლავის წინ გაივლის, <strong>სიკაშკაშე ოდნავ მცირდება</strong>. ეს ვარდნა ძალიან მცირეა — დედამიწის ზომის პლანეტა მზის სიკაშკაშეს მხოლოდ <strong>0.01%</strong>-ით ამცირებს. ამოცანაა ეს პატარა სიგნალი ხმაურში აღმოაჩინო.
+    </div>
+  </div>
+
+  <div class="slider-row">
+    <span class="slider-label">ხმაურის დონე:</span>
+    <input type="range" id="noiseSlider" min="1" max="10" value="6">
+    <span class="slider-value" id="noiseVal">6</span>
+  </div>
+
+  <div class="controls">
+    <button class="btn btn-challenge" id="btnGenerate" onclick="generateChallenge()">
+      🌟 ახალი ვარსკვლავის მონაცემები
+    </button>
+    <button class="btn btn-ai" id="btnAI" onclick="revealAI()">
+      🧠 Neural Network-ის ანალიზი
+    </button>
+    <button class="btn btn-reset" onclick="resetAll()">
+      ↺ თავიდან
+    </button>
+  </div>
+
+  <div class="result-msg human" id="msgHuman"></div>
+  <div class="result-msg ai-found" id="msgAI"></div>
+
+  <div class="chart-section">
+    <div class="chart-header">
+      <span class="chart-title" id="chartTitle">სინათლის მრუდი (Light Curve)</span>
+      <span class="chart-badge" id="chartBadge">მონაცემები არ არის</span>
+    </div>
+    <canvas id="chartCanvas" width="1100" height="260"></canvas>
+    <div class="axis-labels">
+      <span>დრო: 0 დღე</span>
+      <span id="axisMiddle">180 დღე</span>
+      <span id="axisEnd">365 დღე</span>
+    </div>
+  </div>
+
+  <div class="stats-bar" id="statsBar" style="display:none;">
+    <div class="stat-card">
+      <div class="val" id="statTransits">—</div>
+      <div class="label">აღმოჩენილი ტრანზიტი</div>
+    </div>
+    <div class="stat-card">
+      <div class="val" id="statPeriod">—</div>
+      <div class="label">ორბიტალური პერიოდი</div>
+    </div>
+    <div class="stat-card">
+      <div class="val" id="statDepth">—</div>
+      <div class="label">სიკაშკაშის ვარდნა</div>
+    </div>
+  </div>
+
+  <div class="how-section">
+    <h3>🧠 როგორ მუშაობს Neural Network?</h3>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01 — სწავლა</div>
+        <div class="step-text">CNN ისწავლის ათასობით light curve-ზე — რომლებშიც ცნობილია სად არის პლანეტა და სად არა.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">02 — პატერნი</div>
+        <div class="step-text">ქსელი სწავლობს ტრანზიტის „ფორმას" — პერიოდულ, სიმეტრიულ ჩაღრმავებას, რომელიც ხმაურისგან განსხვავდება.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">03 — აღმოჩენა</div>
+        <div class="step-text">ახალ მონაცემებზე ქსელი ამოიცნობს სიგნალს, რომელიც ადამიანის თვალს ვერ დაუნახავს ხმაურში.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ======= STARFIELD =======
+(function createStars() {
+  const sf = document.getElementById('starfield');
+  for (let i = 0; i < 150; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const size = Math.random() * 2.5 + 0.5;
+    s.style.width = size + 'px';
+    s.style.height = size + 'px';
+    s.style.left = Math.random() * 100 + '%';
+    s.style.top = Math.random() * 100 + '%';
+    s.style.setProperty('--dur', (2 + Math.random() * 4) + 's');
+    s.style.setProperty('--min-o', (0.1 + Math.random() * 0.2).toFixed(2));
+    s.style.setProperty('--max-o', (0.5 + Math.random() * 0.5).toFixed(2));
+    s.style.animationDelay = (Math.random() * 3) + 's';
+    sf.appendChild(s);
+  }
+})();
+
+// ======= CHART STATE =======
+const canvas = document.getElementById('chartCanvas');
+const ctx = canvas.getContext('2d');
+let rawData = [];
+let transitIndices = [];
+let transitPeriod = 0;
+let transitDepth = 0;
+let noiseLevel = 6;
+let aiRevealed = false;
+
+const POINTS = 730; // ~2 years of daily data
+const BASE_FLUX = 1.0;
+
+document.getElementById('noiseSlider').addEventListener('input', (e) => {
+  noiseLevel = parseInt(e.target.value);
+  document.getElementById('noiseVal').textContent = noiseLevel;
+});
+
+// ======= GENERATE DATA =======
+function generateChallenge() {
+  aiRevealed = false;
+  document.getElementById('btnAI').classList.add('active');
+  document.getElementById('msgHuman').style.display = 'block';
+  document.getElementById('msgAI').style.display = 'none';
+  document.getElementById('statsBar').style.display = 'none';
+  document.getElementById('chartBadge').textContent = 'Kepler — 365 დღე';
+  document.getElementById('chartBadge').style.background = 'rgba(59, 130, 246, 0.15)';
+  document.getElementById('chartBadge').style.color = '#3b82f6';
+
+  // Random planet parameters
+  transitPeriod = Math.floor(Math.random() * 40) + 25; // 25-65 days
+  transitDepth = 0.002 + Math.random() * 0.006; // 0.2% - 0.8%
+  const transitDuration = 3 + Math.floor(Math.random() * 3); // 3-5 data points
+  const phaseOffset = Math.floor(Math.random() * transitPeriod);
+
+  rawData = [];
+  transitIndices = [];
+  const noiseMult = noiseLevel * 0.0012;
+
+  for (let i = 0; i < POINTS; i++) {
+    let flux = BASE_FLUX;
+    // Add noise
+    flux += (Math.random() - 0.5) * 2 * noiseMult;
+    // Add slow drift (instrumental)
+    flux += Math.sin(i / 120) * 0.001;
+    // Add occasional glitch
+    if (Math.random() < 0.003) flux -= Math.random() * 0.004;
+
+    // Transit signal
+    const phase = (i - phaseOffset) % transitPeriod;
+    if (phase >= 0 && phase < transitDuration) {
+      // U-shaped transit
+      const mid = transitDuration / 2;
+      const t = (phase - mid) / mid; // -1 to 1
+      const shape = 1 - 0.3 * t * t; // deeper in middle
+      flux -= transitDepth * shape;
+      transitIndices.push(i);
+    }
+
+    rawData.push(flux);
+  }
+
+  document.getElementById('msgHuman').innerHTML =
+    '👁️ <strong>შენი ხმაურიანი მონაცემები მზადაა!</strong><br>' +
+    'შეეცადე იპოვო პერიოდული ჩავარდნები სიკაშკაშეში. ხედავ რამეს?<br>' +
+    '<span style="font-size:0.82rem; opacity:0.7;">მინიშნება: პლანეტა ყოველ ' + transitPeriod + ' დღეში ერთხელ გადის ვარსკვლავის წინ</span>';
+
+  drawChart(false);
+}
+
+// ======= DRAW CHART =======
+function drawChart(showAI) {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+  const W = rect.width;
+  const H = rect.height;
+
+  ctx.clearRect(0, 0, W, H);
+
+  if (rawData.length === 0) {
+    ctx.fillStyle = '#475569';
+    ctx.font = '16px "Noto Sans Georgian", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('დააჭირე „ახალი ვარსკვლავის მონაცემები" დასაწყებად', W / 2, H / 2);
+    return;
+  }
+
+  const pad = { top: 20, bottom: 20, left: 10, right: 10 };
+  const plotW = W - pad.left - pad.right;
+  const plotH = H - pad.top - pad.bottom;
+
+  // Find data range
+  let minF = Infinity, maxF = -Infinity;
+  for (const v of rawData) {
+    if (v < minF) minF = v;
+    if (v > maxF) maxF = v;
+  }
+  const rangeF = maxF - minF || 0.01;
+  const margin = rangeF * 0.1;
+
+  function xPos(i) { return pad.left + (i / (POINTS - 1)) * plotW; }
+  function yPos(v) { return pad.top + plotH - ((v - (minF - margin)) / (rangeF + 2 * margin)) * plotH; }
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  ctx.lineWidth = 1;
+  for (let g = 0; g < 5; g++) {
+    const gy = pad.top + (g / 4) * plotH;
+    ctx.beginPath();
+    ctx.moveTo(pad.left, gy);
+    ctx.lineTo(W - pad.right, gy);
+    ctx.stroke();
+  }
+
+  // Draw AI transit highlights BEHIND the data
+  if (showAI) {
+    const transitSet = new Set(transitIndices);
+    // Draw vertical bands for each transit
+    let bandStart = -1;
+    for (let i = 0; i < POINTS; i++) {
+      if (transitSet.has(i)) {
+        if (bandStart === -1) bandStart = i;
+      } else {
+        if (bandStart !== -1) {
+          const x1 = xPos(bandStart) - 2;
+          const x2 = xPos(i - 1) + 2;
+          // Glow band
+          const grad = ctx.createLinearGradient(x1, 0, x2, 0);
+          grad.addColorStop(0, 'rgba(239, 68, 68, 0)');
+          grad.addColorStop(0.3, 'rgba(239, 68, 68, 0.15)');
+          grad.addColorStop(0.7, 'rgba(239, 68, 68, 0.15)');
+          grad.addColorStop(1, 'rgba(239, 68, 68, 0)');
+          ctx.fillStyle = grad;
+          ctx.fillRect(x1 - 4, pad.top, (x2 - x1) + 8, plotH);
+
+          // Top marker
+          ctx.fillStyle = '#ef4444';
+          ctx.beginPath();
+          const mx = (x1 + x2) / 2;
+          ctx.moveTo(mx - 4, pad.top + 2);
+          ctx.lineTo(mx + 4, pad.top + 2);
+          ctx.lineTo(mx, pad.top + 10);
+          ctx.fill();
+
+          bandStart = -1;
+        }
+      }
+    }
+    if (bandStart !== -1) {
+      const x1 = xPos(bandStart) - 2;
+      const x2 = xPos(POINTS - 1) + 2;
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.12)';
+      ctx.fillRect(x1, pad.top, x2 - x1, plotH);
+    }
+  }
+
+  // Draw data line
+  ctx.beginPath();
+  ctx.strokeStyle = showAI ? 'rgba(6, 182, 212, 0.6)' : 'rgba(6, 182, 212, 0.8)';
+  ctx.lineWidth = 1.2;
+  for (let i = 0; i < POINTS; i++) {
+    const x = xPos(i);
+    const y = yPos(rawData[i]);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // Draw AI: mark transit points
+  if (showAI) {
+    const transitSet = new Set(transitIndices);
+    ctx.fillStyle = '#ef4444';
+    for (const i of transitIndices) {
+      const x = xPos(i);
+      const y = yPos(rawData[i]);
+      ctx.beginPath();
+      ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Draw "clean" transit model
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(239, 68, 68, 0.9)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 4]);
+    // Moving average to show the pattern
+    const windowSize = 5;
+    for (let i = 0; i < POINTS; i++) {
+      if (!transitSet.has(i)) continue;
+      const x = xPos(i);
+      const y = yPos(rawData[i]);
+      ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+// ======= AI REVEAL =======
+function revealAI() {
+  if (rawData.length === 0) return;
+  aiRevealed = true;
+
+  document.getElementById('chartBadge').textContent = '🧠 AI ანალიზი — ტრანზიტები ნაპოვნია!';
+  document.getElementById('chartBadge').style.background = 'rgba(239, 68, 68, 0.15)';
+  document.getElementById('chartBadge').style.color = '#f87171';
+
+  const numTransits = Math.floor(365 / transitPeriod);
+
+  document.getElementById('statsBar').style.display = 'grid';
+  document.getElementById('statTransits').textContent = numTransits;
+  document.getElementById('statPeriod').textContent = transitPeriod + ' დღე';
+  document.getElementById('statDepth').textContent = (transitDepth * 100).toFixed(3) + '%';
+
+  document.getElementById('msgAI').style.display = 'block';
+  document.getElementById('msgAI').innerHTML =
+    '🧠 <strong>Neural Network-მა იპოვა ' + numTransits + ' ტრანზიტი!</strong><br>' +
+    'წითელი ზოლები = AI-ის მიერ აღმოჩენილი ტრანზიტის მომენტები.<br>' +
+    'სიკაშკაშის ვარდნა მხოლოდ <strong>' + (transitDepth * 100).toFixed(3) + '%</strong>-ია — ადამიანის თვალი ვერ ხედავს, AI ხედავს!';
+
+  document.getElementById('msgHuman').style.display = 'none';
+
+  drawChart(true);
+}
+
+// ======= RESET =======
+function resetAll() {
+  rawData = [];
+  transitIndices = [];
+  aiRevealed = false;
+  document.getElementById('btnAI').classList.remove('active');
+  document.getElementById('msgHuman').style.display = 'none';
+  document.getElementById('msgAI').style.display = 'none';
+  document.getElementById('statsBar').style.display = 'none';
+  document.getElementById('chartBadge').textContent = 'მონაცემები არ არის';
+  document.getElementById('chartBadge').style.background = 'rgba(59, 130, 246, 0.15)';
+  document.getElementById('chartBadge').style.color = '#3b82f6';
+  drawChart(false);
+}
+
+// Initial draw
+window.addEventListener('resize', () => drawChart(aiRevealed));
+drawChart(false);
+</script>
+</body>
+</html>

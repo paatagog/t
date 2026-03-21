@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>თანავარსკვლავედების რუკა</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Georgian:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-deep: #050510;
+    --bg-panel: rgba(8, 12, 30, 0.92);
+    --border-glow: rgba(100, 140, 255, 0.15);
+    --star-primary: #e8eaff;
+    --accent-blue: #5b8def;
+    --accent-cyan: #4ecdc4;
+    --accent-gold: #f0c75e;
+    --accent-rose: #e8637a;
+    --text-primary: #d4d8f0;
+    --text-secondary: #8890b5;
+    --text-dim: #555a7a;
+    --line-constellation: rgba(120, 160, 255, 0.35);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans Georgian', sans-serif;
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  /* ═══ STARFIELD CANVAS ═══ */
+  #starfield {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+  }
+
+  /* ═══ MAIN CONSTELLATION CANVAS ═══ */
+  #constellation-canvas {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    cursor: crosshair;
+  }
+
+  /* ═══ NEBULA GLOW OVERLAY ═══ */
+  .nebula-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 600px 400px at 20% 30%, rgba(60, 40, 120, 0.08) 0%, transparent 70%),
+      radial-gradient(ellipse 500px 500px at 80% 70%, rgba(30, 60, 120, 0.06) 0%, transparent 70%),
+      radial-gradient(ellipse 300px 300px at 50% 50%, rgba(40, 80, 100, 0.04) 0%, transparent 70%);
+  }
+
+  /* ═══ HEADER ═══ */
+  .header {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 32px;
+    background: linear-gradient(180deg, rgba(5, 5, 16, 0.95) 0%, transparent 100%);
+    pointer-events: none;
+  }
+
+  .header > * { pointer-events: all; }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .logo-icon {
+    width: 38px; height: 38px;
+    position: relative;
+  }
+
+  .logo-icon::before {
+    content: '✦';
+    font-size: 28px;
+    color: var(--accent-blue);
+    filter: drop-shadow(0 0 8px rgba(91, 141, 239, 0.5));
+    animation: logoPulse 3s ease-in-out infinite;
+  }
+
+  @keyframes logoPulse {
+    0%, 100% { opacity: 0.8; }
+    50% { opacity: 1; }
+  }
+
+  .logo-text {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .season-tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-glow);
+    border-radius: 12px;
+    padding: 4px;
+    backdrop-filter: blur(20px);
+  }
+
+  .season-tab {
+    padding: 8px 18px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 400;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .season-tab:hover { color: var(--text-primary); }
+  .season-tab.active {
+    background: rgba(91, 141, 239, 0.15);
+    color: var(--accent-blue);
+    font-weight: 600;
+  }
+
+  /* ═══ SIDEBAR ═══ */
+  .sidebar {
+    position: fixed;
+    left: 0; top: 80px; bottom: 0;
+    width: 260px;
+    z-index: 10;
+    padding: 16px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--text-dim) transparent;
+  }
+
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--text-dim); border-radius: 2px; }
+
+  .sidebar-section-title {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    padding-left: 8px;
+  }
+
+  .constellation-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .constellation-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    border: 1px solid transparent;
+  }
+
+  .constellation-item:hover {
+    background: rgba(91, 141, 239, 0.06);
+    border-color: var(--border-glow);
+  }
+
+  .constellation-item.active {
+    background: rgba(91, 141, 239, 0.1);
+    border-color: rgba(91, 141, 239, 0.3);
+  }
+
+  .constellation-item .symbol {
+    width: 32px; height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    border-radius: 8px;
+    background: rgba(91, 141, 239, 0.08);
+    flex-shrink: 0;
+  }
+
+  .constellation-item .info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .constellation-item .name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .constellation-item .latin {
+    font-size: 10px;
+    color: var(--text-secondary);
+    font-style: italic;
+  }
+
+  /* ═══ INFO PANEL ═══ */
+  .info-panel {
+    position: fixed;
+    right: 24px;
+    top: 90px;
+    width: 340px;
+    z-index: 10;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-glow);
+    border-radius: 16px;
+    backdrop-filter: blur(30px);
+    padding: 28px;
+    opacity: 0;
+    transform: translateX(20px);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--text-dim) transparent;
+  }
+
+  .info-panel.visible {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: all;
+  }
+
+  .info-panel .close-btn {
+    position: absolute;
+    top: 16px; right: 16px;
+    width: 28px; height: 28px;
+    border: none;
+    background: rgba(255,255,255,0.05);
+    color: var(--text-secondary);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+
+  .info-panel .close-btn:hover {
+    background: rgba(255,255,255,0.1);
+    color: var(--text-primary);
+  }
+
+  .info-header {
+    margin-bottom: 20px;
+  }
+
+  .info-header .constellation-symbol {
+    font-size: 36px;
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .info-header h2 {
+    font-size: 22px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 4px;
+  }
+
+  .info-header .subtitle {
+    font-size: 13px;
+    color: var(--accent-blue);
+    font-style: italic;
+  }
+
+  .info-divider {
+    height: 1px;
+    background: linear-gradient(90deg, var(--accent-blue), transparent);
+    margin: 16px 0;
+    opacity: 0.3;
+  }
+
+  .info-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .stat-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 10px;
+    padding: 12px;
+  }
+
+  .stat-card .stat-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+
+  .stat-card .stat-value {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--accent-cyan);
+  }
+
+  .info-description {
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+  }
+
+  .brightest-star {
+    background: linear-gradient(135deg, rgba(240, 199, 94, 0.08), rgba(240, 199, 94, 0.02));
+    border: 1px solid rgba(240, 199, 94, 0.15);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 16px;
+  }
+
+  .brightest-star .label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--accent-gold);
+    margin-bottom: 6px;
+  }
+
+  .brightest-star .star-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--accent-gold);
+  }
+
+  .brightest-star .star-info {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+
+  .mythology-section h3 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--accent-rose);
+    margin-bottom: 8px;
+  }
+
+  .mythology-section p {
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--text-secondary);
+  }
+
+  /* ═══ INSTRUCTION TOOLTIP ═══ */
+  .instruction {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-glow);
+    backdrop-filter: blur(20px);
+    border-radius: 12px;
+    padding: 12px 24px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    animation: fadeUp 1s ease 1s both;
+  }
+
+  .instruction .key {
+    background: rgba(91, 141, 239, 0.15);
+    color: var(--accent-blue);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 11px;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+
+  /* ═══ STAR TOOLTIP ═══ */
+  .star-tooltip {
+    position: fixed;
+    z-index: 20;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-glow);
+    backdrop-filter: blur(20px);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 11px;
+    color: var(--text-primary);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    white-space: nowrap;
+  }
+
+  .star-tooltip.visible { opacity: 1; }
+
+  /* ═══ RESPONSIVE ═══ */
+  @media (max-width: 900px) {
+    .sidebar { display: none; }
+    .info-panel { right: 12px; left: 12px; width: auto; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="starfield"></canvas>
+<div class="nebula-overlay"></div>
+<canvas id="constellation-canvas"></canvas>
+
+<div class="header">
+  <div class="logo">
+    <div class="logo-icon"></div>
+    <div class="logo-text">CONSTELLATION MAP</div>
+  </div>
+  <div class="season-tabs">
+    <button class="season-tab active" data-season="all">ყველა</button>
+    <button class="season-tab" data-season="winter">ზამთარი</button>
+    <button class="season-tab" data-season="spring">გაზაფხული</button>
+    <button class="season-tab" data-season="summer">ზაფხული</button>
+    <button class="season-tab" data-season="autumn">შემოდგომა</button>
+  </div>
+</div>
+
+<div class="sidebar">
+  <div class="sidebar-section-title">თანავარსკვლავედები</div>
+  <div class="constellation-list" id="constellation-list"></div>
+</div>
+
+<div class="info-panel" id="info-panel">
+  <button class="close-btn" onclick="closeInfoPanel()">✕</button>
+  <div id="info-content"></div>
+</div>
+
+<div class="star-tooltip" id="star-tooltip"></div>
+
+<div class="instruction">
+  <span class="key">← →</span> მარცხენა სია · აირჩიეთ თანავარსკვლავედი ინფორმაციისთვის
+</div>
+
+<script>
+// ═══════════════════════════════════════
+//  CONSTELLATION DATA
+// ═══════════════════════════════════════
+const constellations = [
+  {
+    id: 'orion',
+    name: 'ორიონი',
+    latin: 'Orion',
+    symbol: '🏹',
+    season: 'winter',
+    area: 594,
+    mainStars: 7,
+    brightestStar: 'რიგელი (Rigel)',
+    brightestStarInfo: 'სიკაშკაშე: 0.13m · მანძილი: 860 სინათლის წელი',
+    magnitude: 0.13,
+    description: 'ორიონი ცის ერთ-ერთი ყველაზე ცნობილი და ადვილად ამოსაცნობი თანავარსკვლავედია. მისი სამი ვარსკვლავისგან შემდგარი "სარტყელი" თითქმის ყველა კულტურაში ცნობილია. ორიონი შეიცავს ორ ძალიან ნათელ ვარსკვლავს — რიგელსა და ბეტელგეიზეს.',
+    mythology: 'ბერძნული მითოლოგიის მიხედვით, ორიონი იყო გიგანტი მონადირე, ზევსის ან პოსეიდონის შვილი. მას სკორპიონმა მოუღო ბოლო, ამიტომ ეს ორი თანავარსკვლავედი ცაზე ერთდროულად არასოდეს ჩანს.',
+    stars: [
+      {x: 0.45, y: 0.15, size: 4, name: 'ბეტელგეიზე', bright: true},
+      {x: 0.58, y: 0.18, size: 2.5, name: 'ბელატრიქსი'},
+      {x: 0.47, y: 0.42, size: 2, name: 'მინტაკა'},
+      {x: 0.50, y: 0.45, size: 2.2, name: 'ალნილამი'},
+      {x: 0.53, y: 0.48, size: 2, name: 'ალნიტაკი'},
+      {x: 0.58, y: 0.72, size: 4.5, name: 'რიგელი', bright: true},
+      {x: 0.42, y: 0.70, size: 2.5, name: 'საიფი'},
+    ],
+    lines: [[0,1],[0,3],[1,3],[2,3],[3,4],[4,5],[4,6],[0,6],[1,5]]
+  },
+  {
+    id: 'ursa_major',
+    name: 'დიდი დათვი',
+    latin: 'Ursa Major',
+    symbol: '🐻',
+    season: 'spring',
+    area: 1280,
+    mainStars: 7,
+    brightestStar: 'ალიოთი (Alioth)',
+    brightestStarInfo: 'სიკაშკაშე: 1.77m · მანძილი: 81 სინათლის წელი',
+    magnitude: 1.77,
+    description: 'დიდი დათვი ცის ჩრდილოეთ ნახევარსფეროს ყველაზე დიდი და ცნობილი თანავარსკვლავედია. მისი ყველაზე ცნობილი ნაწილი "დიდი კოვზი" შვიდი ნათელი ვარსკვლავისგან შედგება.',
+    mythology: 'მითოლოგიის თანახმად, ზევსმა მშვენიერი ნიმფა კალისტო დათვად აქცია ჰერას შურის გამო, შემდეგ კი ცაზე აიტანა, რომ მონადირეებისგან დაეცვა.',
+    stars: [
+      {x: 0.35, y: 0.30, size: 3, name: 'დუბჰე', bright: true},
+      {x: 0.42, y: 0.25, size: 3, name: 'მერაქი'},
+      {x: 0.52, y: 0.28, size: 3, name: 'ფეკდა'},
+      {x: 0.58, y: 0.32, size: 3, name: 'მეგრეცი'},
+      {x: 0.65, y: 0.38, size: 3.5, name: 'ალიოთი', bright: true},
+      {x: 0.72, y: 0.42, size: 2.8, name: 'მიცარი'},
+      {x: 0.78, y: 0.38, size: 2.5, name: 'ალკაიდი'},
+    ],
+    lines: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[0,3]]
+  },
+  {
+    id: 'scorpius',
+    name: 'მორიელი',
+    latin: 'Scorpius',
+    symbol: '🦂',
+    season: 'summer',
+    area: 497,
+    mainStars: 18,
+    brightestStar: 'ანტარესი (Antares)',
+    brightestStarInfo: 'სიკაშკაშე: 0.96m · მანძილი: 550 სინათლის წელი',
+    magnitude: 0.96,
+    description: 'მორიელი ზოდიაქოს ერთ-ერთი ყველაზე ეფექტური თანავარსკვლავედია. მისი ცენტრალური ვარსკვლავი ანტარესი წითელი ზეგიგანტია, რომელიც მარსის მეტოქედ მიიჩნევა ("ანტი-არესი").',
+    mythology: 'ბერძნული მითის თანახმად, ეს არის ის სკორპიონი, რომელიც დედამიწამ გაგზავნა ორიონის დასამარცხებლად. ღვთაებებმა ორივე ცაზე ატანეს, მაგრამ ისე, რომ ერთმანეთს ვერასოდეს ხედავენ.',
+    stars: [
+      {x: 0.40, y: 0.20, size: 2.5, name: 'დშუბა'},
+      {x: 0.45, y: 0.28, size: 2, name: 'აკრაბი'},
+      {x: 0.48, y: 0.38, size: 4.5, name: 'ანტარესი', bright: true},
+      {x: 0.50, y: 0.48, size: 2, name: 'ტაუ სკორპიი'},
+      {x: 0.55, y: 0.55, size: 2, name: 'ეპსილონ სკორპიი'},
+      {x: 0.60, y: 0.62, size: 2, name: 'ზეტა სკორპიი'},
+      {x: 0.65, y: 0.68, size: 2.5, name: 'ეტა სკორპიი'},
+      {x: 0.62, y: 0.75, size: 3, name: 'შაულა', bright: true},
+      {x: 0.58, y: 0.78, size: 2, name: 'ლესათი'},
+    ],
+    lines: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8]]
+  },
+  {
+    id: 'cassiopeia',
+    name: 'კასიოპეა',
+    latin: 'Cassiopeia',
+    symbol: '👑',
+    season: 'autumn',
+    area: 598,
+    mainStars: 5,
+    brightestStar: 'შედარი (Schedar)',
+    brightestStarInfo: 'სიკაშკაშე: 2.24m · მანძილი: 228 სინათლის წელი',
+    magnitude: 2.24,
+    description: 'კასიოპეა ხუთი ნათელი ვარსკვლავის W-ისებრი ფორმით არის ცნობილი. ის ჩრდილოეთ ნახევარსფეროდან მთელი წლის განმავლობაში ჩანს და ადვილად ამოსაცნობია.',
+    mythology: 'კასიოპეა იყო ეთიოპიის დედოფალი, ანდრომედას დედა. მან თავისი სილამაზით ნერეიდები შეურაცხყო, რისთვისაც პოსეიდონმა სასჯელად ცაზე მიაჯაჭვა.',
+    stars: [
+      {x: 0.32, y: 0.45, size: 3.5, name: 'შედარი', bright: true},
+      {x: 0.42, y: 0.30, size: 3, name: 'კაფი'},
+      {x: 0.52, y: 0.48, size: 3, name: 'ციჰი'},
+      {x: 0.62, y: 0.28, size: 2.8, name: 'რუხბა'},
+      {x: 0.70, y: 0.42, size: 2.5, name: 'სეგინი'},
+    ],
+    lines: [[0,1],[1,2],[2,3],[3,4]]
+  },
+  {
+    id: 'leo',
+    name: 'ლომი',
+    latin: 'Leo',
+    symbol: '🦁',
+    season: 'spring',
+    area: 947,
+    mainStars: 9,
+    brightestStar: 'რეგულუსი (Regulus)',
+    brightestStarInfo: 'სიკაშკაშე: 1.36m · მანძილი: 79 სინათლის წელი',
+    magnitude: 1.36,
+    description: 'ლომი ზოდიაქოს ერთ-ერთი უძველესი თანავარსკვლავედია. მისი ყველაზე ნათელი ვარსკვლავი რეგულუსი ("პატარა მეფე") ცის ზოლთან ძალიან ახლოს მდებარეობს.',
+    mythology: 'ეს არის ნემეის ლომი, რომლის მოკვლაც ჰერაკლეს პირველი გმირობა იყო. ლომის ტყავი ხმალსაც კი არ ეკვეთებოდა, ამიტომ ჰერაკლემ ხელით შეიპყრო.',
+    stars: [
+      {x: 0.35, y: 0.60, size: 4, name: 'რეგულუსი', bright: true},
+      {x: 0.38, y: 0.48, size: 2, name: 'ეტა ლეონისი'},
+      {x: 0.42, y: 0.35, size: 2.5, name: 'ალგიება'},
+      {x: 0.48, y: 0.25, size: 2, name: 'ზოსმა'},
+      {x: 0.58, y: 0.22, size: 2, name: 'რას ელასედი'},
+      {x: 0.65, y: 0.28, size: 3.5, name: 'დენებოლა', bright: true},
+      {x: 0.55, y: 0.40, size: 2, name: 'შერტანი'},
+    ],
+    lines: [[0,1],[1,2],[2,3],[3,4],[4,5],[4,6],[6,2],[0,6]]
+  },
+  {
+    id: 'cygnus',
+    name: 'გედი',
+    latin: 'Cygnus',
+    symbol: '🦢',
+    season: 'summer',
+    area: 804,
+    mainStars: 9,
+    brightestStar: 'დენები (Deneb)',
+    brightestStarInfo: 'სიკაშკაშე: 1.25m · მანძილი: 2,615 სინათლის წელი',
+    magnitude: 1.25,
+    description: 'გედი, ცნობილი როგორც "ჩრდილოეთის ჯვარი", ზაფხულის ცის ერთ-ერთი ყველაზე მშვენიერი თანავარსკვლავედია. მისი ნათელი ვარსკვლავი დენები ზაფხულის სამკუთხედის ნაწილია.',
+    mythology: 'ზევსი გედის სახით ეწვია ლედას. ასევე ბერძნული მითის მიხედვით, ეს არის ორფეოსის გარდაქმნილი სახე, რომელიც ცაზე თავის ლირასთან ახლოს მოთავსდა.',
+    stars: [
+      {x: 0.50, y: 0.18, size: 4, name: 'დენები', bright: true},
+      {x: 0.50, y: 0.35, size: 2.5, name: 'სადრი'},
+      {x: 0.42, y: 0.45, size: 2, name: 'გიენაჰი'},
+      {x: 0.58, y: 0.45, size: 2, name: 'დელტა ციგნი'},
+      {x: 0.50, y: 0.55, size: 3, name: 'ალბირეო', bright: true},
+      {x: 0.35, y: 0.35, size: 1.5, name: 'ზეტა ციგნი'},
+      {x: 0.65, y: 0.35, size: 1.5, name: 'ეპსილონ ციგნი'},
+    ],
+    lines: [[0,1],[1,2],[1,3],[1,4],[2,5],[3,6]]
+  },
+  {
+    id: 'lyra',
+    name: 'ლირა',
+    latin: 'Lyra',
+    symbol: '🎵',
+    season: 'summer',
+    area: 286,
+    mainStars: 5,
+    brightestStar: 'ვეგა (Vega)',
+    brightestStarInfo: 'სიკაშკაშე: 0.03m · მანძილი: 25 სინათლის წელი',
+    magnitude: 0.03,
+    description: 'ლირა პატარა, მაგრამ ძალიან მნიშვნელოვანი თანავარსკვლავედია. მისი მთავარი ვარსკვლავი ვეგა ცის მეხუთე ნათელი ვარსკვლავია და ზაფხულის სამკუთხედის ნაწილია.',
+    mythology: 'ლირა ორფეოსის მუსიკალური ინსტრუმენტია. ორფეოსის სიკვდილის შემდეგ ზევსმა მისი ლირა ცაზე ატანა.',
+    stars: [
+      {x: 0.50, y: 0.25, size: 5, name: 'ვეგა', bright: true},
+      {x: 0.45, y: 0.45, size: 2, name: 'შელიაკი'},
+      {x: 0.55, y: 0.45, size: 2, name: 'სულაფატი'},
+      {x: 0.44, y: 0.60, size: 1.5, name: 'დელტა ლირაე'},
+      {x: 0.56, y: 0.60, size: 1.5, name: 'ზეტა ლირაე'},
+    ],
+    lines: [[0,1],[0,2],[1,3],[2,4],[3,4]]
+  },
+  {
+    id: 'taurus',
+    name: 'კურო',
+    latin: 'Taurus',
+    symbol: '🐂',
+    season: 'winter',
+    area: 797,
+    mainStars: 19,
+    brightestStar: 'ალდებარანი (Aldebaran)',
+    brightestStarInfo: 'სიკაშკაშე: 0.85m · მანძილი: 65 სინათლის წელი',
+    magnitude: 0.85,
+    description: 'კურო ზოდიაქოს ძველი და ეფექტური თანავარსკვლავედია. მისი წითელი გიგანტი ალდებარანი "ხარის თვალს" წარმოადგენს. კუროში მდებარეობს პლეადების ცნობილი ვარსკვლავთგროვა.',
+    mythology: 'ზევსმა ხარის სახე მიიღო, რომ მშვენიერი ევროპა მოიტაცა. ეს თანავარსკვლავედი ერთ-ერთი უძველესია — ლასკოს გამოქვაბულებშიც კი გამოსახულია.',
+    stars: [
+      {x: 0.50, y: 0.40, size: 4.5, name: 'ალდებარანი', bright: true},
+      {x: 0.42, y: 0.35, size: 2, name: 'ჰიადები 1'},
+      {x: 0.45, y: 0.30, size: 1.8, name: 'ჰიადები 2'},
+      {x: 0.55, y: 0.32, size: 2, name: 'ჰიადები 3'},
+      {x: 0.58, y: 0.38, size: 1.8, name: 'ჰიადები 4'},
+      {x: 0.35, y: 0.55, size: 3, name: 'ელ-ნათი', bright: true},
+      {x: 0.65, y: 0.58, size: 2.5, name: 'ზეტა ტაური'},
+      {x: 0.32, y: 0.18, size: 2, name: 'პლეადები'},
+    ],
+    lines: [[0,1],[1,2],[0,3],[3,4],[0,5],[0,6],[2,7]]
+  },
+  {
+    id: 'gemini',
+    name: 'ტყუპები',
+    latin: 'Gemini',
+    symbol: '👬',
+    season: 'winter',
+    area: 514,
+    mainStars: 8,
+    brightestStar: 'პოლუქსი (Pollux)',
+    brightestStarInfo: 'სიკაშკაშე: 1.14m · მანძილი: 34 სინათლის წელი',
+    magnitude: 1.14,
+    description: 'ტყუპები ზოდიაქოს ერთ-ერთი ცნობილი თანავარსკვლავედია. მისი ორი ნათელი ვარსკვლავი — კასტორი და პოლუქსი — ტყუპი ძმების თავებს წარმოადგენს.',
+    mythology: 'კასტორი და პოლუქსი ტყუპი ძმები იყვნენ — კასტორი მოკვდავი, პოლუქსი კი უკვდავი (ზევსის შვილი). კასტორის სიკვდილის შემდეგ პოლუქსმა ზევსს სთხოვა ერთად ყოფილიყვნენ.',
+    stars: [
+      {x: 0.42, y: 0.18, size: 3.5, name: 'კასტორი', bright: true},
+      {x: 0.52, y: 0.20, size: 4, name: 'პოლუქსი', bright: true},
+      {x: 0.40, y: 0.35, size: 2, name: 'მებსუტა'},
+      {x: 0.54, y: 0.38, size: 2, name: 'ვასატი'},
+      {x: 0.38, y: 0.55, size: 2, name: 'ტეჯატი'},
+      {x: 0.56, y: 0.58, size: 2, name: 'ალჰენა'},
+      {x: 0.40, y: 0.72, size: 1.8, name: 'მიუ ჯემინორუმი'},
+      {x: 0.55, y: 0.74, size: 1.8, name: 'ქსი ჯემინორუმი'},
+    ],
+    lines: [[0,2],[2,4],[4,6],[1,3],[3,5],[5,7],[0,1],[2,3],[4,5]]
+  },
+  {
+    id: 'aquila',
+    name: 'არწივი',
+    latin: 'Aquila',
+    symbol: '🦅',
+    season: 'summer',
+    area: 652,
+    mainStars: 10,
+    brightestStar: 'ალტაირი (Altair)',
+    brightestStarInfo: 'სიკაშკაშე: 0.77m · მანძილი: 17 სინათლის წელი',
+    magnitude: 0.77,
+    description: 'არწივი ზაფხულის ცის გამორჩეული თანავარსკვლავედია. ალტაირი, მისი მთავარი ვარსკვლავი, ცის ერთ-ერთი უახლოესი ნათელი ვარსკვლავია და ზაფხულის სამკუთხედის მესამე წევრია.',
+    mythology: 'ეს არის ზევსის არწივი, რომელიც ტროელ ყმაწვილ განიმედეს ოლიმპოზე წაიყვანა ღმერთების მოსამსახურედ.',
+    stars: [
+      {x: 0.50, y: 0.35, size: 4.5, name: 'ალტაირი', bright: true},
+      {x: 0.43, y: 0.30, size: 2, name: 'ტარაზედი'},
+      {x: 0.57, y: 0.40, size: 2, name: 'ალშაინი'},
+      {x: 0.48, y: 0.55, size: 2, name: 'თეტა აქვილაე'},
+      {x: 0.55, y: 0.22, size: 2, name: 'დელტა აქვილაე'},
+      {x: 0.42, y: 0.50, size: 1.8, name: 'ლამბდა აქვილაე'},
+    ],
+    lines: [[1,0],[0,2],[1,4],[2,3],[0,3],[0,5]]
+  },
+  {
+    id: 'andromeda',
+    name: 'ანდრომედა',
+    latin: 'Andromeda',
+    symbol: '⛓️',
+    season: 'autumn',
+    area: 722,
+    mainStars: 16,
+    brightestStar: 'ალფერაცი (Alpheratz)',
+    brightestStarInfo: 'სიკაშკაშე: 2.06m · მანძილი: 97 სინათლის წელი',
+    magnitude: 2.06,
+    description: 'ანდრომედა შემოდგომის ცის მნიშვნელოვანი თანავარსკვლავედია. მასში მდებარეობს ანდრომედას გალაქტიკა (M31) — ირმის ნახტომის უახლოესი მსხვილი გალაქტიკა, შეუიარაღებელი თვალითაც ხილული.',
+    mythology: 'ანდრომედა კასიოპეას ქალიშვილი იყო, რომელიც ზღვის ურჩხულს შესწირეს დედის ცოდვის გამოსასყიდად. პერსევსმა გადაარჩინა და ცოლად შეირთო.',
+    stars: [
+      {x: 0.30, y: 0.45, size: 3.5, name: 'ალფერაცი', bright: true},
+      {x: 0.42, y: 0.40, size: 2.5, name: 'დელტა ანდრომედაე'},
+      {x: 0.55, y: 0.38, size: 3, name: 'მირახი', bright: true},
+      {x: 0.68, y: 0.35, size: 2.5, name: 'ალმახი'},
+      {x: 0.58, y: 0.28, size: 1.5, name: 'მიუ ანდრომედაე'},
+      {x: 0.50, y: 0.52, size: 1.5, name: 'კაპპა ანდრომედაე'},
+    ],
+    lines: [[0,1],[1,2],[2,3],[2,4],[1,5]]
+  },
+  {
+    id: 'perseus',
+    name: 'პერსევსი',
+    latin: 'Perseus',
+    symbol: '⚔️',
+    season: 'winter',
+    area: 615,
+    mainStars: 19,
+    brightestStar: 'მირფაკი (Mirfak)',
+    brightestStarInfo: 'სიკაშკაშე: 1.79m · მანძილი: 510 სინათლის წელი',
+    magnitude: 1.79,
+    description: 'პერსევსი ზამთრის ცის მნიშვნელოვანი თანავარსკვლავედია. მასში მდებარეობს ცნობილი ცვალებადი ვარსკვლავი ალგოლი ("ეშმაკის ვარსკვლავი"), რომელიც ყოველ 2.87 დღეში სიკაშკაშეს იცვლის.',
+    mythology: 'პერსევსი ზევსისა და დანაეს გმირი ვაჟიშვილია, რომელმაც მედუზა გორგონა მოკლა და ანდრომედა გადაარჩინა.',
+    stars: [
+      {x: 0.50, y: 0.28, size: 4, name: 'მირფაკი', bright: true},
+      {x: 0.42, y: 0.42, size: 3, name: 'ალგოლი', bright: true},
+      {x: 0.55, y: 0.18, size: 2, name: 'დელტა პერსეი'},
+      {x: 0.58, y: 0.35, size: 2, name: 'ეპსილონ პერსეი'},
+      {x: 0.45, y: 0.55, size: 1.8, name: 'როი პერსეი'},
+      {x: 0.52, y: 0.48, size: 1.8, name: 'ზეტა პერსეი'},
+    ],
+    lines: [[2,0],[0,3],[0,5],[5,1],[1,4],[3,5]]
+  },
+];
+
+// ═══════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════
+let activeConstellation = null;
+let activeSeason = 'all';
+let hoveredStar = null;
+
+// ═══════════════════════════════════════
+//  STARFIELD BACKGROUND
+// ═══════════════════════════════════════
+const sfCanvas = document.getElementById('starfield');
+const sfCtx = sfCanvas.getContext('2d');
+let bgStars = [];
+
+function initStarfield() {
+  sfCanvas.width = window.innerWidth;
+  sfCanvas.height = window.innerHeight;
+  bgStars = [];
+  const count = Math.floor((sfCanvas.width * sfCanvas.height) / 2500);
+  for (let i = 0; i < count; i++) {
+    bgStars.push({
+      x: Math.random() * sfCanvas.width,
+      y: Math.random() * sfCanvas.height,
+      size: Math.random() * 1.3 + 0.2,
+      alpha: Math.random() * 0.6 + 0.1,
+      twinkleSpeed: Math.random() * 0.02 + 0.005,
+      twinklePhase: Math.random() * Math.PI * 2,
+    });
+  }
+}
+
+function drawStarfield(time) {
+  sfCtx.clearRect(0, 0, sfCanvas.width, sfCanvas.height);
+  for (const s of bgStars) {
+    const alpha = s.alpha + Math.sin(time * s.twinkleSpeed + s.twinklePhase) * 0.15;
+    sfCtx.beginPath();
+    sfCtx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+    sfCtx.fillStyle = `rgba(200, 210, 255, ${Math.max(0.05, alpha)})`;
+    sfCtx.fill();
+  }
+}
+
+// ═══════════════════════════════════════
+//  MAIN CONSTELLATION CANVAS
+// ═══════════════════════════════════════
+const mainCanvas = document.getElementById('constellation-canvas');
+const ctx = mainCanvas.getContext('2d');
+
+function resizeCanvas() {
+  mainCanvas.width = window.innerWidth;
+  mainCanvas.height = window.innerHeight;
+}
+
+function drawConstellation(c, time) {
+  const offsetX = 260;
+  const drawWidth = mainCanvas.width - offsetX - 380;
+  const drawHeight = mainCanvas.height - 160;
+  const startX = offsetX + 40;
+  const startY = 100;
+
+  // Convert relative coords to canvas coords
+  const pts = c.stars.map(s => ({
+    x: startX + s.x * drawWidth,
+    y: startY + s.y * drawHeight,
+    size: s.size,
+    name: s.name,
+    bright: s.bright || false,
+  }));
+
+  // Draw connection lines
+  ctx.lineWidth = 1.2;
+  for (const [a, b] of c.lines) {
+    const pA = pts[a], pB = pts[b];
+    const grad = ctx.createLinearGradient(pA.x, pA.y, pB.x, pB.y);
+    grad.addColorStop(0, 'rgba(100, 150, 255, 0.25)');
+    grad.addColorStop(0.5, 'rgba(100, 150, 255, 0.4)');
+    grad.addColorStop(1, 'rgba(100, 150, 255, 0.25)');
+    ctx.strokeStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(pA.x, pA.y);
+    ctx.lineTo(pB.x, pB.y);
+    ctx.stroke();
+  }
+
+  // Draw stars
+  for (let i = 0; i < pts.length; i++) {
+    const p = pts[i];
+    const pulse = 1 + Math.sin(time * 0.002 + i) * 0.15;
+    const r = p.size * pulse;
+
+    // Outer glow
+    if (p.bright) {
+      const glowGrad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 8);
+      glowGrad.addColorStop(0, 'rgba(140, 180, 255, 0.15)');
+      glowGrad.addColorStop(1, 'transparent');
+      ctx.fillStyle = glowGrad;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, r * 8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Inner glow
+    const innerGrad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 3);
+    innerGrad.addColorStop(0, 'rgba(200, 220, 255, 0.3)');
+    innerGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = innerGrad;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r * 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Star core
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = p.bright ? '#fff' : 'rgba(220, 230, 255, 0.9)';
+    ctx.fill();
+
+    // Cross spikes for bright stars
+    if (p.bright) {
+      ctx.strokeStyle = `rgba(200, 220, 255, ${0.15 + pulse * 0.05})`;
+      ctx.lineWidth = 0.5;
+      const spikeLen = r * 5;
+      ctx.beginPath();
+      ctx.moveTo(p.x - spikeLen, p.y);
+      ctx.lineTo(p.x + spikeLen, p.y);
+      ctx.moveTo(p.x, p.y - spikeLen);
+      ctx.lineTo(p.x, p.y + spikeLen);
+      ctx.stroke();
+    }
+  }
+
+  return pts;
+}
+
+// ═══════════════════════════════════════
+//  SIDEBAR
+// ═══════════════════════════════════════
+function renderSidebar() {
+  const list = document.getElementById('constellation-list');
+  const filtered = activeSeason === 'all'
+    ? constellations
+    : constellations.filter(c => c.season === activeSeason);
+
+  list.innerHTML = filtered.map(c => `
+    <div class="constellation-item ${activeConstellation?.id === c.id ? 'active' : ''}"
+         onclick="selectConstellation('${c.id}')">
+      <div class="symbol">${c.symbol}</div>
+      <div class="info">
+        <div class="name">${c.name}</div>
+        <div class="latin">${c.latin}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════
+//  INFO PANEL
+// ═══════════════════════════════════════
+function showInfoPanel(c) {
+  const panel = document.getElementById('info-panel');
+  const content = document.getElementById('info-content');
+
+  const seasonMap = { winter: 'ზამთარი', spring: 'გაზაფხული', summer: 'ზაფხული', autumn: 'შემოდგომა' };
+
+  content.innerHTML = `
+    <div class="info-header">
+      <span class="constellation-symbol">${c.symbol}</span>
+      <h2>${c.name}</h2>
+      <div class="subtitle">${c.latin}</div>
+    </div>
+    <div class="info-divider"></div>
+    <div class="info-stats">
+      <div class="stat-card">
+        <div class="stat-label">ფართობი</div>
+        <div class="stat-value">${c.area} კვ.°</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">ვარსკვლავები</div>
+        <div class="stat-value">${c.mainStars}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">სეზონი</div>
+        <div class="stat-value">${seasonMap[c.season]}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">სიკაშკაშე</div>
+        <div class="stat-value">${c.magnitude}m</div>
+      </div>
+    </div>
+    <p class="info-description">${c.description}</p>
+    <div class="brightest-star">
+      <div class="label">ყველაზე ნათელი ვარსკვლავი</div>
+      <div class="star-name">${c.brightestStar}</div>
+      <div class="star-info">${c.brightestStarInfo}</div>
+    </div>
+    <div class="mythology-section">
+      <h3>მითოლოგია</h3>
+      <p>${c.mythology}</p>
+    </div>
+  `;
+
+  panel.classList.add('visible');
+}
+
+function closeInfoPanel() {
+  document.getElementById('info-panel').classList.remove('visible');
+  activeConstellation = null;
+  renderSidebar();
+}
+
+function selectConstellation(id) {
+  activeConstellation = constellations.find(c => c.id === id);
+  showInfoPanel(activeConstellation);
+  renderSidebar();
+}
+
+// ═══════════════════════════════════════
+//  SEASON TABS
+// ═══════════════════════════════════════
+document.querySelectorAll('.season-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.season-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    activeSeason = tab.dataset.season;
+    activeConstellation = null;
+    closeInfoPanel();
+    renderSidebar();
+  });
+});
+
+// ═══════════════════════════════════════
+//  MOUSE HOVER ON STARS
+// ═══════════════════════════════════════
+let currentStarPts = [];
+mainCanvas.addEventListener('mousemove', (e) => {
+  const tooltip = document.getElementById('star-tooltip');
+  let found = false;
+  for (const p of currentStarPts) {
+    const dx = e.clientX - p.x;
+    const dy = e.clientY - p.y;
+    if (Math.sqrt(dx*dx + dy*dy) < Math.max(p.size * 3, 12)) {
+      tooltip.textContent = p.name;
+      tooltip.style.left = (e.clientX + 14) + 'px';
+      tooltip.style.top = (e.clientY - 10) + 'px';
+      tooltip.classList.add('visible');
+      found = true;
+      break;
+    }
+  }
+  if (!found) tooltip.classList.remove('visible');
+});
+
+// ═══════════════════════════════════════
+//  ANIMATION LOOP
+// ═══════════════════════════════════════
+function animate(time) {
+  drawStarfield(time);
+
+  ctx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+
+  if (activeConstellation) {
+    currentStarPts = drawConstellation(activeConstellation, time);
+  } else {
+    currentStarPts = [];
+    // Draw a subtle hint: constellation name in center
+    ctx.fillStyle = 'rgba(100, 140, 200, 0.08)';
+    ctx.font = '60px "Noto Sans Georgian"';
+    ctx.textAlign = 'center';
+    ctx.fillText('✦', mainCanvas.width / 2, mainCanvas.height / 2);
+    ctx.font = '16px "Noto Sans Georgian"';
+    ctx.fillStyle = 'rgba(100, 140, 200, 0.2)';
+    ctx.fillText('აირჩიეთ თანავარსკვლავედი', mainCanvas.width / 2, mainCanvas.height / 2 + 40);
+  }
+
+  requestAnimationFrame(animate);
+}
+
+// ═══════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════
+window.addEventListener('resize', () => {
+  initStarfield();
+  resizeCanvas();
+});
+
+initStarfield();
+resizeCanvas();
+renderSidebar();
+requestAnimationFrame(animate);
+
+// Auto-select first constellation after brief delay
+setTimeout(() => selectConstellation('orion'), 800);
+</script>
+</body>
+</html>
