@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="ka" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<title>Graph Navigator Bot</title>
+<style>
+  :root{
+    --mono: "IBM Plex Mono","SFMono-Regular",Consolas,monospace;
+  }
+  html[data-theme="dark"]{
+    --bg:#0b0d10;
+    --panel:#12161b;
+    --line:#232a31;
+    --ink:#d7e0e6;
+    --dim:#7c8891;
+    --accent:#3fc9a3;
+    --accent-dim:#245b4c;
+    --accent-ink:#06110d;
+    --user:#1c2530;
+    --bot:#151b21;
+    --input-bg:#0d1013;
+    --edge-line:#3a4148;
+    --arrow-fill:#5b6672;
+    --node-stroke:#0b0d10;
+    --node-label:#c9d3da;
+    --ring-current:#3fc9a3;
+    --ring-goal:#e2b93b;
+  }
+  html[data-theme="light"]{
+    --bg:#f4f2ee;
+    --panel:#ffffff;
+    --line:#dcd7cd;
+    --ink:#23272b;
+    --dim:#767068;
+    --accent:#0d7a63;
+    --accent-dim:#dcf2ea;
+    --accent-ink:#ffffff;
+    --user:#eaf1ee;
+    --bot:#f6f4f0;
+    --input-bg:#ffffff;
+    --edge-line:#c9c2b6;
+    --arrow-fill:#9a9284;
+    --node-stroke:#ffffff;
+    --node-label:#4a453e;
+    --ring-current:#0d7a63;
+    --ring-goal:#b8860b;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--mono);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:20px;
+    transition:background .15s, color .15s;
+  }
+  .topbar{
+    width:100%;
+    max-width:1080px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:14px;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  .topbar h1{
+    font-size:14px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--dim);
+    margin:0;
+    font-weight:600;
+  }
+  .controls{display:flex; gap:8px;}
+  .toggle-btn{
+    background:transparent;
+    color:var(--dim);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:6px 10px;
+    font-family:var(--mono);
+    font-size:12px;
+    cursor:pointer;
+  }
+  .toggle-btn.active{
+    color:var(--accent-ink);
+    background:var(--accent);
+    border-color:var(--accent);
+  }
+  .app{
+    width:100%;
+    max-width:1080px;
+    display:grid;
+    grid-template-columns:1.15fr 0.85fr;
+    gap:18px;
+  }
+  .app.solo{ grid-template-columns:1fr; max-width:720px; }
+  @media (max-width:820px){
+    .app{grid-template-columns:1fr; }
+  }
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:6px;
+    display:flex;
+    flex-direction:column;
+    min-height:560px;
+    overflow:hidden;
+  }
+  .panel-head{
+    padding:10px 14px;
+    border-bottom:1px solid var(--line);
+    font-size:12px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--dim);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block;margin-right:8px;box-shadow:0 0 6px var(--accent);}
+  #log{
+    flex:1;
+    overflow-y:auto;
+    padding:14px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    font-size:14px;
+    line-height:1.5;
+  }
+  .msg{max-width:88%; padding:9px 12px; border-radius:5px; white-space:pre-wrap;}
+  .bot{background:var(--bot); border:1px solid var(--line); align-self:flex-start;}
+  .user{background:var(--user); border:1px solid var(--line); align-self:flex-end;}
+  .sys{align-self:center; color:var(--dim); font-size:12px; border:none;}
+  .opt-list{margin-top:4px; color:var(--accent);}
+  .inputbar{
+    display:flex;
+    border-top:1px solid var(--line);
+    padding:10px;
+    gap:8px;
+  }
+  #cmd{
+    flex:1;
+    background:var(--input-bg);
+    border:1px solid var(--line);
+    color:var(--ink);
+    border-radius:4px;
+    padding:10px 12px;
+    font-family:var(--mono);
+    font-size:14px;
+    outline:none;
+  }
+  #cmd:focus{border-color:var(--accent);}
+  button.send{
+    background:var(--accent-dim);
+    color:var(--accent);
+    border:1px solid var(--accent);
+    border-radius:4px;
+    padding:0 16px;
+    font-family:var(--mono);
+    font-size:13px;
+    cursor:pointer;
+  }
+  button.send:hover{background:var(--accent); color:var(--accent-ink);}
+  .side-body{padding:14px; overflow:auto; flex:1;}
+  svg{width:100%; height:auto; display:block;}
+  .legend{font-size:11px; color:var(--dim); padding:10px 14px; border-top:1px solid var(--line);}
+  .legend b{color:var(--ink);}
+  textarea#graphSrc{
+    width:100%;
+    height:150px;
+    background:var(--input-bg);
+    color:var(--ink);
+    border:1px solid var(--line);
+    border-radius:4px;
+    font-family:var(--mono);
+    font-size:11px;
+    padding:8px;
+    resize:vertical;
+  }
+  .loadrow{display:flex; gap:8px; margin-top:8px;}
+  .loadrow button{flex:none; padding:6px 12px; font-size:12px;}
+  .hint{color:var(--dim); font-size:11px; margin-top:6px;}
+  .admin-badge{
+    font-size:10px;
+    letter-spacing:.08em;
+    color:var(--ring-goal);
+    border:1px solid var(--ring-goal);
+    border-radius:3px;
+    padding:2px 6px;
+    margin-left:8px;
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1 id="appTitle">Graph Navigator</h1>
+  <div class="controls">
+    <button class="toggle-btn" id="langKa">KA</button>
+    <button class="toggle-btn" id="langEn">EN</button>
+    <button class="toggle-btn" id="themeDark">●</button>
+    <button class="toggle-btn" id="themeLight">○</button>
+  </div>
+</div>
+
+<div class="app" id="appGrid">
+
+  <div class="panel">
+    <div class="panel-head"><span><span class="dot"></span><span id="botHeadLabel">ნავიგატორ-ბოტი</span></span><span id="statusLabel">—</span></div>
+    <div id="log"></div>
+    <div class="inputbar">
+      <input id="cmd" type="text" autocomplete="off">
+      <button class="send" id="sendBtn">გაგზავნა</button>
+    </div>
+  </div>
+
+  <div class="panel" id="adminPanel">
+    <div class="panel-head"><span id="mapHeadLabel">გრაფის რუკა</span><span class="admin-badge" id="adminBadge">ADMIN</span></div>
+    <div class="side-body">
+      <svg id="mapSvg" viewBox="0 0 860 420" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+    <div class="legend">
+      <div><span id="legendText"></span></div>
+    </div>
+    <div class="side-body" style="border-top:1px solid var(--line); flex:none;">
+      <div class="hint" id="graphSrcHint">გრაფის აღწერა (შეგიძლია ჩაანაცვლო შენით):</div>
+      <textarea id="graphSrc"></textarea>
+      <div class="loadrow">
+        <button class="send" id="loadBtn">გრაფის ჩატვირთვა</button>
+        <button class="send" id="resetBtn">თავიდან დაწყება</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+
+const x25Rxc = "ieR4PJv4RypNKykt";
+const A6ovNk = "SkUQcgNqJ0E7A1AYKgsCFQcRcgRkQDV7HD85CWs3KjksOh5xHg0ifHJMeg0ENy09LkUWcRYLI3gGJj4BDzw0NyYpHWZwaTR1EEhIC0E6JDovLBUUFA8wdQc1JBEOPSwxNiYdeB8YVhdgQEMNfzthJz0kAGBwADdmHXM3AQo1Szs7LBw+WgQ5cBdZOg8ZNktFW1VyBmR7VhcUQEd9ek9hOiYhFxQRBjB1cktGfmtIWk1JRhR2EgxEAFg3PwoOWTwmKCwGFGJ8RhRhS0BuaEpfMFpcaz4eBTJxci0xHARZX0ZZRWoEcGkzDGVANndBNyQwLEUVeB8FOxRmS0BuekBfVEpWanYUDE4+HDY0C2sqJDgoN3IAYnpWB2BOUG15SyhBXCBYeh8OMxQHNDIcClleTFlFYwRpalVxFE1Een9zJTstIHJ+HwYiFGdBQG55TVNUSiMQA2FyQz4cNjQLaykqLChFZwxgakUCallTfA89XzYvbxx7FA9WewAwPm58T1tUW1djFHMLQQwQPzFEQTwvMyxFGHUCBVYZbFkxAg04S1dQXWtyY3xWBVg8NAkOWSE1OypyGW5qIWYTMCRuaEsuTVEgFBRhQDNwFTxQDwc/KlRVW3JgERg5FHFBRQx7PF9UWG8XcBcPVnUePzFuZkdLMyUqHXlwaTR2EUlBfWtIYTEtIhcUBxg3fQZZXXBrPic7JihyF2V/TgJqQVB/QTwvMyxFBWYRAyIUf1RQHQQ1KiZJRhACYQ41cXJLegsPPi5UPSQAe3BnSBQHNDIcCllIQ1tUY3Fkakc+Fz03C2s+JzsmKHIZbmojeRArMW5oOFM3UCFrFGFAM3AVPFAJBzYkOUlZbBQaBTpgclpHfHhLU0BJVFhxFA0zFAE2PA8ZWUZKSTUTbBFqVQJhPDF8DllafiwhFXFwHzt2ADhQY3VZJCYgK3IXZwtPBWJMUH9BPC8zLEUYexweVhl/WT8cAjdLVyohYAJoelYFWDw0CQ5ZOzUxJHIZbmo5Zhs3UG18TVpDWldyB1oPMnMXWSQPGTZLWURFFXgfBTsUcU9Gewk4XVRYbxdwFw9WYR87Ig9rVEZUIyoeYHBpRnEWT0cNa0g=";
+function jEfftM(data, key) {
+    const H74Q = atob(data);
+    let Urjp = "";
+    for (let SZm = 0; SZm < H74Q.length; SZm++) {
+        Urjp += String.fromCharCode(H74Q.charCodeAt(SZm) ^ key.charCodeAt(SZm % key.length));
+    }
+    return Urjp;
+}
+const sampleGraphText = jEfftM(A6ovNk, x25Rxc);
+
+// ---------- i18n ----------
+const STRINGS = {
+  ka: {
+    appTitle: 'გრაფის ნავიგატორი',
+    botHead: 'ნავიგატორ-ბოტი',
+    mapHead: 'გრაფის რუკა',
+    adminBadge: 'ADMIN რეჟიმი',
+    inputPlaceholder: 'აკრიფე კვანძის სახელი, ნომერი ან "დახმარება"...',
+    sendBtn: 'გაგზავნა',
+    finishedSuffix: ' · დასრულდა',
+    legend: 'მწვანე რგოლი — მიმდინარე კვანძი &nbsp; ოქროსფერი რგოლი — მიზანი',
+    graphSrcHint: 'გრაფის აღწერა (შეგიძლია ჩაანაცვლო შენით):',
+    loadBtn: 'გრაფის ჩატვირთვა',
+    resetBtn: 'თავიდან დაწყება',
+    startMissingError: 'შეცდომა: START კვანძი არ არის განსაზღვრული ან არ არსებობს NODE სიაში.',
+    graphLoaded: 'გრაფი ჩაიტვირთა.',
+    startGoalInfo: (start, goal) => `დაწყების წერტილი: ${start}` + (goal ? ` · მიზანი: ${goal}` : ''),
+    parseError: (msg) => 'გრაფის დამუშავებისას მოხდა შეცდომა: ' + msg,
+    noExit: (node) => `ამ კვანძიდან (${node}) გასასვლელი აღარ არის — ჩიხია.`,
+    currentNodeLine: (node) => `მიმდინარე კვანძი: ${node}`,
+    possibleMoves: 'შესაძლო გადასვლები',
+    weightLabel: 'წონა',
+    moveHint: 'დაწერე კვანძის სახელი ან ნომერი გადასასვლელად.',
+    invalidMove: (names) => `ასეთი გადასვლა შეუძლებელია. დაშვებული კვანძებია: ${names}`,
+    noneOption: '(არცერთი)',
+    movedTo: (node, weight) => `გადავედი კვანძზე: ${node} (გამოყენებული წონა: ${weight})`,
+    goalReached: (goal) => `🏁 მიზანს მიაღწიე! (${goal}) შეგიძლია დაწერო "თავიდან" ხელახლა დასაწყებად.`,
+    restarted: 'თამაში დაიწყო თავიდან.',
+    helpText: `<b>ბრძანებები:</b>\n— კვანძის სახელი ან ნომერი: გადასვლა შესაბამის კვანძზე\n— "სად ვარ" ან "options": მიმდინარე კვანძისა და გასასვლელების ხელახლა ჩვენება\n— "თავიდან": თამაშის გადატვირთვა START კვანძიდან\n— "დახმარება": ეს შეტყობინება`,
+    finishedNotice: 'თამაში დასრულებულია. დაწერე "თავიდან" ხელახლა დასაწყებად.',
+  },
+  en: {
+    appTitle: 'Graph Navigator',
+    botHead: 'Navigator Bot',
+    mapHead: 'Graph Map',
+    adminBadge: 'ADMIN MODE',
+    inputPlaceholder: 'Type a node name, a number, or "help"...',
+    sendBtn: 'Send',
+    finishedSuffix: ' · finished',
+    legend: 'Green ring — current node &nbsp; Gold ring — goal',
+    graphSrcHint: 'Graph description (you can replace it with your own):',
+    loadBtn: 'Load graph',
+    resetBtn: 'Restart',
+    startMissingError: 'Error: START node is not defined or does not exist in the NODE list.',
+    graphLoaded: 'Graph loaded.',
+    startGoalInfo: (start, goal) => `Start node: ${start}` + (goal ? ` · Goal: ${goal}` : ''),
+    parseError: (msg) => 'An error occurred while parsing the graph: ' + msg,
+    noExit: (node) => `There are no outgoing edges from this node (${node}) — dead end.`,
+    currentNodeLine: (node) => `Current node: ${node}`,
+    possibleMoves: 'Possible moves',
+    weightLabel: 'weight',
+    moveHint: 'Type a node name or a number to move.',
+    invalidMove: (names) => `That move is not allowed. Allowed nodes: ${names}`,
+    noneOption: '(none)',
+    movedTo: (node, weight) => `Moved to node: ${node} (weight used: ${weight})`,
+    goalReached: (goal) => `🏁 You reached the goal! (${goal}) Type "restart" to start over.`,
+    restarted: 'The game has been restarted.',
+    helpText: `<b>Commands:</b>\n— node name or number: move to that node\n— "where" or "options": show current node and moves again\n— "restart": reset the game to the START node\n— "help": this message`,
+    finishedNotice: 'The game is finished. Type "restart" to start over.',
+  }
+};
+
+let lang = 'ka';
+function t(key, ...args){
+  const entry = STRINGS[lang][key];
+  return typeof entry === 'function' ? entry(...args) : entry;
+}
+
+// ---------- Theme ----------
+function setTheme(theme){
+  document.documentElement.setAttribute('data-theme', theme);
+  document.getElementById('themeDark').classList.toggle('active', theme === 'dark');
+  document.getElementById('themeLight').classList.toggle('active', theme === 'light');
+  if(graph) drawMap();
+}
+document.getElementById('themeDark').addEventListener('click', () => setTheme('dark'));
+document.getElementById('themeLight').addEventListener('click', () => setTheme('light'));
+
+// ---------- Language ----------
+function applyStaticText(){
+  document.getElementById('appTitle').textContent = t('appTitle');
+  document.getElementById('botHeadLabel').textContent = t('botHead');
+  document.getElementById('mapHeadLabel').textContent = t('mapHead');
+  document.getElementById('adminBadge').textContent = t('adminBadge');
+  document.getElementById('cmd').placeholder = t('inputPlaceholder');
+  document.getElementById('sendBtn').textContent = t('sendBtn');
+  document.getElementById('legendText').innerHTML = t('legend');
+  document.getElementById('graphSrcHint').textContent = t('graphSrcHint');
+  document.getElementById('loadBtn').textContent = t('loadBtn');
+  document.getElementById('resetBtn').textContent = t('resetBtn');
+  document.getElementById('langKa').classList.toggle('active', lang === 'ka');
+  document.getElementById('langEn').classList.toggle('active', lang === 'en');
+  if(statusEl) statusEl.textContent = current ? (current + (finished ? t('finishedSuffix') : '')) : '—';
+}
+function setLang(l){
+  lang = l;
+  applyStaticText();
+}
+document.getElementById('langKa').addEventListener('click', () => setLang('ka'));
+document.getElementById('langEn').addEventListener('click', () => setLang('en'));
+
+// ---------- Parser ----------
+function parseGraph(text){
+  const cfg = {};
+  const nodes = new Map();
+  const edgesRaw = [];
+  const adj = new Map();
+  let start = null, goal = null;
+
+  const lines = text.split(/\r?\n/);
+  for(const raw of lines){
+    const line = raw.trim();
+    if(!line || line.startsWith('#')) continue;
+    const tks = line.split(/\s+/);
+    const kw = tks[0].toUpperCase();
+
+    if(kw === 'CONFIG'){
+      cfg[tks[1]] = tks[2];
+    } else if(kw === 'START'){
+      start = tks[1];
+    } else if(kw === 'GOAL'){
+      goal = tks[1];
+    } else if(kw === 'NODE'){
+      const [_, name, x, y, color] = tks;
+      nodes.set(name, {x:+x, y:+y, color: color || cfg.DEFAULT_NODE_COLOR || '#888'});
+      if(!adj.has(name)) adj.set(name, []);
+    } else if(kw === 'EDGE'){
+      const [_, a, op, b, color, weightStr] = tks;
+      const weight = weightStr !== undefined ? Number(weightStr) : 1;
+      edgesRaw.push({a, op, b, color: color || cfg.DEFAULT_EDGE_COLOR || '#666', weight});
+      if(!adj.has(a)) adj.set(a, []);
+      if(!adj.has(b)) adj.set(b, []);
+      if(op === '->'){
+        adj.get(a).push({to:b, weight});
+      } else if(op === '--' || op === '<>'){
+        adj.get(a).push({to:b, weight});
+        adj.get(b).push({to:a, weight});
+      } else {
+        adj.get(a).push({to:b, weight});
+      }
+    }
+  }
+  return {cfg, nodes, edgesRaw, adj, start, goal};
+}
+
+// ---------- Bot state ----------
+let graph = null;
+let current = null;
+let finished = false;
+
+const logEl = document.getElementById('log');
+const cmdEl = document.getElementById('cmd');
+const statusEl = document.getElementById('statusLabel');
+const graphSrcEl = document.getElementById('graphSrc');
+
+function addMsg(text, cls){
+  const div = document.createElement('div');
+  div.className = 'msg ' + cls;
+  div.textContent = text;
+  logEl.appendChild(div);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+function addBotHTML(html){
+  const div = document.createElement('div');
+  div.className = 'msg bot';
+  div.innerHTML = html;
+  logEl.appendChild(div);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function neighborsOf(nodeName){
+  return (graph.adj.get(nodeName) || []).slice();
+}
+
+function formatOptionsHTML(nodeName){
+  const opts = neighborsOf(nodeName);
+  if(opts.length === 0){
+    return `<div>${t('noExit', nodeName)}</div>`;
+  }
+  const rows = opts.map((o,i)=>`${i+1}. ${o.to}  (${t('weightLabel')}: ${o.weight})`).join('\n');
+  return `<div><b>${t('currentNodeLine', nodeName)}</b></div>` +
+         `<div class="opt-list">${t('possibleMoves')}:\n${rows}</div>` +
+         `<div style="margin-top:6px;color:var(--dim);font-size:12px;">${t('moveHint')}</div>`;
+}
+
+function announceCurrent(){
+  statusEl.textContent = current + (finished ? t('finishedSuffix') : '');
+  addBotHTML(formatOptionsHTML(current));
+}
+
+function tryMove(target){
+  const opts = neighborsOf(current);
+  let match = null;
+  if(/^\d+$/.test(target)){
+    const idx = parseInt(target,10) - 1;
+    if(idx >= 0 && idx < opts.length) match = opts[idx];
+  }
+  if(!match){
+    match = opts.find(o => o.to.toUpperCase() === target.toUpperCase());
+  }
+  if(!match){
+    const names = opts.map(o=>o.to).join(', ') || t('noneOption');
+    addMsg(t('invalidMove', names), 'bot');
+    return;
+  }
+  current = match.to;
+  addMsg(t('movedTo', current, match.weight), 'bot');
+
+  if(graph.goal && current.toUpperCase() === graph.goal.toUpperCase()){
+    finished = true;
+    addMsg(t('goalReached', graph.goal), 'bot');
+    statusEl.textContent = current + t('finishedSuffix');
+    return;
+  }
+  announceCurrent();
+}
+
+function restart(){
+  current = graph.start;
+  finished = false;
+  addMsg(t('restarted'), 'sys');
+  announceCurrent();
+}
+
+function handleHelp(){
+  addBotHTML(t('helpText'));
+}
+
+const HELP_WORDS = ['დახმარება','help'];
+const RESTART_WORDS = ['თავიდან','restart'];
+const WHERE_WORDS = ['სად ვარ','where','options','სად?'];
+
+function handleUserInput(raw){
+  const text = raw.trim();
+  if(!text) return;
+  addMsg(text, 'user');
+  const lower = text.toLowerCase();
+
+  if(HELP_WORDS.includes(lower)){ handleHelp(); return; }
+  if(RESTART_WORDS.includes(lower)){ restart(); return; }
+  if(WHERE_WORDS.includes(lower)){ announceCurrent(); return; }
+  if(finished){ addMsg(t('finishedNotice'), 'bot'); return; }
+  tryMove(text);
+}
+
+// ---------- Boot ----------
+function loadGraphFromTextarea(){
+  const text = graphSrcEl.value;
+  try{
+    graph = parseGraph(text);
+    if(!graph.start || !graph.nodes.has(graph.start)){
+      addMsg(t('startMissingError'), 'sys');
+      return;
+    }
+    current = graph.start;
+    finished = false;
+    logEl.innerHTML = '';
+    addMsg(t('graphLoaded'), 'sys');
+    addMsg(t('startGoalInfo', graph.start, graph.goal), 'sys');
+    announceCurrent();
+  } catch(err){
+    addMsg(t('parseError', err.message), 'sys');
+  }
+}
+
+function applyAdminVisibility(){
+  const appGrid = document.getElementById('appGrid');
+  const adminPanel = document.getElementById('adminPanel');
+  adminPanel.style.display = 'none';
+  appGrid.classList.add('solo');
+}
+
+document.getElementById('sendBtn').addEventListener('click', () => {
+  const v = cmdEl.value; cmdEl.value = ''; handleUserInput(v);
+});
+cmdEl.addEventListener('keydown', (e) => {
+  if(e.key === 'Enter'){ const v = cmdEl.value; cmdEl.value = ''; handleUserInput(v); }
+});
+document.getElementById('loadBtn').addEventListener('click', loadGraphFromTextarea);
+document.getElementById('resetBtn').addEventListener('click', () => { if(graph) restart(); });
+
+applyAdminVisibility();
+setTheme('light');
+setLang('en');
+graphSrcEl.value = sampleGraphText;
+loadGraphFromTextarea();
+</script>
+
+</body>
+</html>

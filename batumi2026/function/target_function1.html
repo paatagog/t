@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title ka="ფუნქციის გრაფიკი" en="Function Plot">ფუნქციის გრაფიკი</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+            tex2jax: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            }
+        });
+    </script>
+    
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2c3e50;
+            --background-color: #f9f9f9;
+            --grid-color: #e1e1e1;
+            --axis-color: #333;
+            --graph-color: #e74c3c;
+            --point-color: #9b59b6;
+            --hover-color: #27ae60;
+            --area-color: rgba(231, 76, 60, 0.2);
+            --highlight-radius: 6px;
+            --point-radius: 4px;
+            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            font-family: var(--font-family);
+            background-color: var(--background-color);
+            margin: 0;
+            padding: 20px;
+            color: var(--secondary-color);
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start; /* Changed from center to flex-start */
+        }
+        
+        .language-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            cursor: pointer;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        
+        .language-toggle:hover {
+            background-color: #2980b9;
+        }
+        
+        h1 {
+            color: var(--secondary-color);
+            margin-bottom: 10px;
+            text-align: left; /* Changed from center to left */
+        }
+        
+        p {
+            text-align: left;
+            font-size: 18px;
+        }
+        
+        .graph-container {
+            position: relative;
+            width: 800px;
+            height: 500px;
+            margin: 20px 0; /* Changed from margin: 20px auto */
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            background-color: white;
+            overflow: hidden;
+        }
+        
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        
+        .coordinates {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            font-family: monospace;
+            font-size: 14px;
+        }
+        
+        .cursor-position {
+            margin-bottom: 5px;
+        }
+        
+        .graph-point {
+            margin-top: 5px;
+            color: var(--graph-color);
+            font-weight: bold;
+        }
+        
+        .fixed-point {
+            margin-top: 5px;
+            color: var(--point-color);
+            font-weight: bold;
+        }
+        
+        .point-description {
+            margin-top: 5px;
+            color: var(--point-color); 
+            font-weight: bold;
+            max-width: 250px;
+            word-wrap: break-word;
+            padding: 3px;
+            border-radius: 3px;
+        }
+        
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start; /* Changed from center to flex-start */
+            gap: 10px;
+        }
+        
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        
+        .checkbox-container input {
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
+        }
+    </style>
+</head>
+<body>
+    <button class="language-toggle" onclick="switchLanguage()" ka="EN" en="ქა">EN</button>
+    
+    <h1 ka="ფუნქციის გრაფიკი" en="Function Plot">ფუნქციის გრაფიკი</h1>
+	<span ka="იპოვეთ ქვემოთ მოცემული ფუნქციის წარმოებული $x=2.5$ წერტილში, თუ ცნობილია, რომ ფუნქციის სახეა $a \sin(x) \cdot \frac{x}{2}$, სადაც $a \in \{0, \frac{2}{3}, 1, 5, 10\}$" en="Find the derivative of the function given below at $x=2.5$, given that the function is of the form $a \sin(x) \cdot \frac{x}{2}$, where $a \in \{0, \frac{2}{3}, 1, 5, 10\}$">იპოვეთ ქვემოთ მოცემული ფუნქციის წარმოებული $x=2.5$ წერტილში, თუ ცნობილია, რომ ფუნქციის სახეა $a \sin(x) \cdot \frac{x}{2}$, სადაც $a \in \{0, \frac{2}{3}, 1, 5, 10\}$</span>
+	<span style="font-size:8pt" ka="გაითვალისწინეთ, რომ ეკრანზე გამოტანილი კოორდინატები არის დამრგვალებული გარკვეულ თანრიგამდე" en="Note that the coordinates below are rounded to several decimals">გაითვალისწინეთ, რომ ეკრანზე გამოტანილი კოორდინატები არის დამრგვალებული გარკვეულ თანრიგამდე</span>
+	
+    
+    <div class="graph-container">
+        <canvas id="graphCanvas"></canvas>
+        <div class="coordinates">
+            <div class="cursor-position" ka="x: -, y: -" en="x: -, y: -">x: -, y: -</div>
+            <div class="graph-point" ka="ფუნქციის წერტილი: (-, -)" en="Function point: (-, -)">ფუნქციის წერტილი: (-, -)</div>
+            <div class="fixed-point" ka="ფიქსირებული წერტილი: (-, -)" en="Fixed point: (-, -)">ფიქსირებული წერტილი: (-, -)</div>
+            <div class="point-description" ka="" en=""></div>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <label class="checkbox-container">
+            <input type="checkbox" id="showAreaCheckbox">
+            <span ka="გრაფიკსა და x ღერძს შორის მოქცეული არის ჩვენება" en="Show area between graph and x-axis">გრაფიკსა და x ღერძს შორის მოქცეული არის ჩვენება</span>
+        </label>
+    </div>
+    
+    <script>
+        // Canvas setup
+        const canvas = document.getElementById('graphCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Graph configuration
+        const config = {
+            xMin: -10,
+            xMax: 10,
+            yMin: -5,
+            yMax: 5,
+            xAxisLabel: {
+                ka: "Y ღერძი",
+                en: "Y axis"
+            },
+            yAxisLabel: {
+                ka: "X ღერძი",
+                en: "X axis"
+            },
+            gridSpacing: 1,
+            pointProximity: 0.5, // Proximity threshold for fixed points
+            canvasWidth: 800,
+            canvasHeight: 500,
+            padding: 50 // Padding around the graph
+        };
+        
+        // Fixed points to mark on the graph
+        const fixedPoints = [-7.9787, -4.9132, -3.1416, 0, 1, 2.0288, 6.2832];
+        
+        // Descriptions for fixed points (parallel array with fixedPoints)
+		const fixedPointDescriptions = new Map([
+		  ["-7.9787", 'ლოკალური მაქსიმუმის წერტილი'],
+		  ["-4.9132", 'ლოკალური მინიმუმის წერტილი'],
+		  ["-3.1416", 'ღერძთან კვეთა'],
+		  ["0", 'კოორდინატთა სათავე'],
+		  ["1", 'ამ არეში ფუნქცია ზრდადია'],
+		  ["2.0288", 'ლოკალური მაქსიმუმის წერტილი'],
+		  ["6.2832", 'ღერძთან კვეთა'],
+		]);		
+        
+        // Target function to graph
+        function target_function(x) {
+            return Math.sin(x) * x / 3;
+        }
+        
+        // Language settings
+        let currentLanguage = "ka";
+        
+        // Function to switch language
+        function switchLanguage() {
+            currentLanguage = currentLanguage === "ka" ? "en" : "ka";
+            updateLanguage();
+        }
+        
+        // Function to update all text content based on selected language
+        function updateLanguage() {
+            // Update toggle button
+            const toggleBtn = document.querySelector(".language-toggle");
+            toggleBtn.textContent = toggleBtn.getAttribute(currentLanguage);
+            
+            // Update all elements with ka and en attributes
+            document.querySelectorAll("[ka][en]").forEach(element => {
+                element.textContent = element.getAttribute(currentLanguage);
+            });
+            
+            // Update document title
+            const titleElement = document.querySelector("title");
+            if (titleElement && titleElement.hasAttribute("ka") && titleElement.hasAttribute("en")) {
+                titleElement.textContent = titleElement.getAttribute(currentLanguage);
+            }
+            
+            // Update point description visibility
+            const pointDescriptionEl = document.querySelector('.point-description');
+            if (currentLanguage === 'ka') {
+                pointDescriptionEl.textContent = 'აღწერა: ';
+            } else {
+                pointDescriptionEl.textContent = 'Description: ';
+            }
+            if (typeof MathJax !== 'undefined') {
+                MathJax.Hub.Queue(["Typeset", MathJax.Hub]);
+            }
+            
+            // Redraw the graph with new labels
+            drawGraph();
+        }
+        
+        // Helper functions for coordinate conversion
+        function canvasToGraphX(canvasX) {
+            return config.xMin + (canvasX - config.padding) * (config.xMax - config.xMin) / (canvas.width - 2 * config.padding);
+        }
+        
+        function canvasToGraphY(canvasY) {
+            return config.yMax - (canvasY - config.padding) * (config.yMax - config.yMin) / (canvas.height - 2 * config.padding);
+        }
+        
+        function graphToCanvasX(graphX) {
+            return config.padding + (graphX - config.xMin) * (canvas.width - 2 * config.padding) / (config.xMax - config.xMin);
+        }
+        
+        function graphToCanvasY(graphY) {
+            return config.padding + (config.yMax - graphY) * (canvas.height - 2 * config.padding) / (config.yMax - config.yMin);
+        }
+        
+        // Function to draw the graph
+        function drawGraph() {
+            // Resize canvas to container dimensions
+            canvas.width = config.canvasWidth;
+            canvas.height = config.canvasHeight;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw grid
+            drawGrid();
+            
+            // Draw axes
+            drawAxes();
+            
+            // Draw area if checkbox is checked
+            if (document.getElementById('showAreaCheckbox').checked) {
+                drawArea();
+            }
+            
+            // Draw function graph
+            drawFunction();
+            
+            // Draw fixed points
+            drawFixedPoints();
+        }
+        
+        // Function to draw the grid
+        function drawGrid() {
+            ctx.strokeStyle = '#aaaaaa'; // Darker grid color
+            ctx.lineWidth = 0.5;
+            
+            // Draw vertical grid lines
+            for (let x = Math.ceil(config.xMin); x <= config.xMax; x += config.gridSpacing) {
+                if (x === 0) continue; // Skip axis line
+                const canvasX = graphToCanvasX(x);
+                ctx.beginPath();
+                ctx.moveTo(canvasX, 0);
+                ctx.lineTo(canvasX, canvas.height);
+                ctx.stroke();
+            }
+            
+            // Draw horizontal grid lines
+            for (let y = Math.ceil(config.yMin); y <= config.yMax; y += config.gridSpacing) {
+                if (y === 0) continue; // Skip axis line
+                const canvasY = graphToCanvasY(y);
+                ctx.beginPath();
+                ctx.moveTo(0, canvasY);
+                ctx.lineTo(canvas.width, canvasY);
+                ctx.stroke();
+            }
+        }
+        
+        // Function to draw axes
+        function drawAxes() {
+            ctx.strokeStyle = '#333'; // Axis color
+            ctx.lineWidth = 2;
+            ctx.font = '14px Arial';
+            ctx.fillStyle = '#2c3e50'; // Secondary color
+            
+            // X axis
+            const yAxisPos = graphToCanvasY(0);
+            ctx.beginPath();
+            ctx.moveTo(0, yAxisPos);
+            ctx.lineTo(canvas.width, yAxisPos);
+            ctx.stroke();
+            
+            // Y axis
+            const xAxisPos = graphToCanvasX(0);
+            ctx.beginPath();
+            ctx.moveTo(xAxisPos, 0);
+            ctx.lineTo(xAxisPos, canvas.height);
+            ctx.stroke();
+            
+            // X axis ticks
+            for (let x = Math.ceil(config.xMin); x <= config.xMax; x += config.gridSpacing) {
+                const canvasX = graphToCanvasX(x);
+                
+                // Draw tick
+                ctx.beginPath();
+                ctx.moveTo(canvasX, yAxisPos - 5);
+                ctx.lineTo(canvasX, yAxisPos + 5);
+                ctx.stroke();
+                
+                // Draw label
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+                ctx.fillText(x, canvasX, yAxisPos + 8);
+            }
+            
+            // Y axis ticks
+            for (let y = Math.ceil(config.yMin); y <= config.yMax; y += config.gridSpacing) {
+                const canvasY = graphToCanvasY(y);
+                
+                // Draw tick
+                ctx.beginPath();
+                ctx.moveTo(xAxisPos - 5, canvasY);
+                ctx.lineTo(xAxisPos + 5, canvasY);
+                ctx.stroke();
+                
+                // Draw label if not at zero
+                if (y !== 0) {
+                    ctx.textAlign = 'right';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(y, xAxisPos - 8, canvasY);
+                }
+            }
+            
+            // Draw axis labels
+            ctx.font = 'bold 16px Arial';
+            
+            // X-axis label
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            ctx.fillText(config.xAxisLabel[currentLanguage], canvas.width / 2, canvas.height - 20);
+            
+            // Y-axis label
+            ctx.save();
+            ctx.translate(20, canvas.height / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.textAlign = 'center';
+            ctx.fillText(config.yAxisLabel[currentLanguage], 0, 0);
+            ctx.restore();
+        }
+        
+        // Function to draw the function graph
+        function drawFunction() {
+            ctx.strokeStyle = '#e74c3c'; // Graph color
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            
+            // Plot function
+            const step = (config.xMax - config.xMin) / canvas.width;
+            let isFirstPoint = true;
+            
+            for (let graphX = config.xMin; graphX <= config.xMax; graphX += step) {
+                const graphY = target_function(graphX);
+                const canvasX = graphToCanvasX(graphX);
+                const canvasY = graphToCanvasY(graphY);
+                
+                if (isFirstPoint) {
+                    ctx.moveTo(canvasX, canvasY);
+                    isFirstPoint = false;
+                } else {
+                    ctx.lineTo(canvasX, canvasY);
+                }
+            }
+            
+            ctx.stroke();
+        }
+        
+        // Function to draw area between graph and X axis
+        function drawArea() {
+            ctx.fillStyle = 'rgba(231, 76, 60, 0.2)'; // Area color
+            ctx.beginPath();
+            
+            // Start at left edge
+            let startX = graphToCanvasX(config.xMin);
+            let startY = graphToCanvasY(0); // X-axis Y position
+            ctx.moveTo(startX, startY);
+            
+            // Plot function for the area
+            const step = (config.xMax - config.xMin) / canvas.width;
+            
+            for (let graphX = config.xMin; graphX <= config.xMax; graphX += step) {
+                const graphY = target_function(graphX);
+                const canvasX = graphToCanvasX(graphX);
+                const canvasY = graphToCanvasY(graphY);
+                ctx.lineTo(canvasX, canvasY);
+            }
+            
+            // Close the path back to X-axis
+            ctx.lineTo(graphToCanvasX(config.xMax), graphToCanvasY(0));
+            ctx.closePath();
+            ctx.fill();
+        }
+        
+        // Function to draw fixed points
+        function drawFixedPoints() {
+            // Draw fixed points with white fill and outlined border
+            fixedPoints.forEach(x => {
+                const y = target_function(x);
+                const canvasX = graphToCanvasX(x);
+                const canvasY = graphToCanvasY(y);
+                
+                // Draw white circle with border
+                ctx.beginPath();
+                ctx.arc(canvasX, canvasY, 6, 0, Math.PI * 2); // Increased point radius
+                ctx.fillStyle = '#ffffff'; // White fill
+                ctx.fill();
+                ctx.strokeStyle = '#9b59b6'; // Border color
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+            });
+        }
+        
+        // Function to handle mouse movement
+        function handleMouseMove(e) {
+            const rect = canvas.getBoundingClientRect();
+            const canvasX = e.clientX - rect.left;
+            const canvasY = e.clientY - rect.top;
+            
+            // Convert to graph coordinates
+            const graphX = canvasToGraphX(canvasX);
+            const graphY = canvasToGraphY(canvasY);
+            
+            // Update cursor position display
+            const cursorPositionEl = document.querySelector('.cursor-position');
+            cursorPositionEl.textContent = `${currentLanguage === 'ka' ? 'x' : 'x'}: ${graphX.toFixed(2)}, ${currentLanguage === 'ka' ? 'y' : 'y'}: ${graphY.toFixed(2)}`;
+            
+            // Update function point at current X position
+            const functionY = target_function(graphX);
+            const graphPointEl = document.querySelector('.graph-point');
+            
+            if (currentLanguage === 'ka') {
+                graphPointEl.textContent = `ფუნქციის წერტილი: (${graphX.toFixed(2)}, ${functionY.toFixed(2)})`;
+            } else {
+                graphPointEl.textContent = `Function point: (${graphX.toFixed(2)}, ${functionY.toFixed(2)})`;
+            }
+            
+            // Clear canvas and redraw
+            drawGraph();
+            
+            // Draw point on graph for current X position
+            const pointCanvasX = graphToCanvasX(graphX);
+            const pointCanvasY = graphToCanvasY(functionY);
+            
+            ctx.fillStyle = '#27ae60'; // Hover color
+            ctx.beginPath();
+            ctx.arc(pointCanvasX, pointCanvasY, 4, 0, Math.PI * 2); // Point radius
+            ctx.fill();
+            
+            // Draw dashed line to X-axis
+            ctx.strokeStyle = '#27ae60'; // Hover color
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 3]);
+            ctx.beginPath();
+            ctx.moveTo(pointCanvasX, pointCanvasY);
+            ctx.lineTo(pointCanvasX, graphToCanvasY(0));
+            ctx.stroke();
+            ctx.setLineDash([]); // Reset line dash
+            
+            // Check for proximity to fixed points
+            let nearestPoint = null;
+            let minDistance = config.pointProximity;
+            
+            fixedPoints.forEach(x => {
+                const y = target_function(x);
+                const distance = Math.sqrt(Math.pow(graphX - x, 2) + Math.pow(graphY - y, 2));
+                
+                if (distance < minDistance) {
+                    nearestPoint = { x, y };
+                    minDistance = distance;
+                }
+            });
+            
+            // Update fixed point info and highlight if close to a fixed point
+            const fixedPointEl = document.querySelector('.fixed-point');
+            const fixedPointDescEl = document.querySelector('.point-description');
+			
+            
+            if (nearestPoint) {
+                // Update text
+                if (currentLanguage === 'ka') {
+                    fixedPointEl.textContent = `ფიქსირებული წერტილი: (${nearestPoint.x.toFixed(2)}, ${nearestPoint.y.toFixed(2)})`;
+					if (fixedPointDescriptions.has(String(nearestPoint.x))) {
+						fixedPointDescEl.textContent = fixedPointDescriptions.get(String(nearestPoint.x));
+					} else {
+						fixedPointDescEl.textContent = "";
+					}
+                } else {
+                    fixedPointEl.textContent = `Fixed point: (${nearestPoint.x.toFixed(2)}, ${nearestPoint.y.toFixed(2)})`;
+					if (fixedPointDescriptions.has(String(nearestPoint.x))) {
+						fixedPointDescEl.textContent = fixedPointDescriptions.get(String(nearestPoint.x));
+					} else {
+						fixedPointDescEl.textContent = "";
+					}
+                }
+                
+                // Highlight the point with a larger circle
+                const highlightX = graphToCanvasX(nearestPoint.x);
+                const highlightY = graphToCanvasY(nearestPoint.y);
+                
+                // Draw larger highlight circle when hovering near fixed points
+                ctx.beginPath();
+                ctx.arc(highlightX, highlightY, 9, 0, Math.PI * 2); // Larger highlight radius
+                ctx.strokeStyle = '#9b59b6'; // Point color
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Redraw the fixed point with white fill to make sure it's visible
+                ctx.beginPath();
+                ctx.arc(highlightX, highlightY, 6, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffffff';
+                ctx.fill();
+                ctx.strokeStyle = '#9b59b6';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+            } else {
+                // Reset text if not near any fixed point
+                if (currentLanguage === 'ka') {
+                    fixedPointEl.textContent = 'ფიქსირებული წერტილი: (-, -)';
+                } else {
+                    fixedPointEl.textContent = 'Fixed point: (-, -)';
+                }
+            }
+        }
+        
+        // Initialize the graph and event listeners
+        function initialize() {
+            // Set canvas size to match container
+            canvas.width = config.canvasWidth;
+            canvas.height = config.canvasHeight;
+            
+            // Draw initial graph
+            drawGraph();
+            
+            // Add event listeners
+            canvas.addEventListener('mousemove', handleMouseMove);
+            document.getElementById('showAreaCheckbox').addEventListener('change', drawGraph);
+        }
+        
+        // Define the fixed points proximity threshold
+        config.pointProximity = 0.5;
+        
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', initialize);
+    </script>
+</body>
+</html>

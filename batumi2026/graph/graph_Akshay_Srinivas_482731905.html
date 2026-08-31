@@ -1,0 +1,2803 @@
+<!DOCTYPE html>
+<html lang="ka" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Graph Studio / გრაფის სტუდია</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --bg-soft: #131a2f;
+      --panel: #17203a;
+      --panel-2: #1f2947;
+      --text: #e6ecff;
+      --muted: #a3b2d9;
+      --accent: #7c9cff;
+      --accent-2: #88f0c8;
+      --border: #2d3a63;
+      --danger: #ff7b7b;
+      --warning: #ffd369;
+      --success: #76e0a6;
+      --shadow: 0 14px 30px rgba(0, 0, 0, 0.22);
+      --grid: rgba(124, 156, 255, 0.12);
+      --canvas: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      --input: #0f1730;
+      --button-text: #eef2ff;
+      --hover: rgba(255,255,255,0.06);
+    }
+
+    html[data-theme="light"] {
+      --bg: #f3f6ff;
+      --bg-soft: #ffffff;
+      --panel: #ffffff;
+      --panel-2: #eef3ff;
+      --text: #16203b;
+      --muted: #5c6787;
+      --accent: #3454d1;
+      --accent-2: #0f9b6f;
+      --border: #d6dff3;
+      --danger: #cc3d3d;
+      --warning: #c47a00;
+      --success: #0f8b4c;
+      --shadow: 0 14px 30px rgba(31, 42, 68, 0.12);
+      --grid: rgba(52, 84, 209, 0.09);
+      --canvas: linear-gradient(180deg, rgba(30,60,120,0.02), rgba(30,60,120,0.01));
+      --input: #f8faff;
+      --button-text: #1b2541;
+      --hover: rgba(52,84,209,0.08);
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100%;
+      background: radial-gradient(circle at top, rgba(124, 156, 255, 0.12), transparent 34%), var(--bg);
+      color: var(--text);
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      padding: 14px;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 410px minmax(0, 1fr);
+      gap: 14px;
+      min-height: calc(100vh - 28px);
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      position: sticky;
+      top: 14px;
+      max-height: calc(100vh - 28px);
+      overflow: auto;
+    }
+
+    .section {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section:last-child { border-bottom: none; }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .title {
+      margin: 0;
+      font-size: 1.3rem;
+      line-height: 1.2;
+    }
+
+    .subtitle {
+      margin: 6px 0 0 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.45;
+    }
+
+    .button-row,
+    .toolbar,
+    .algorithm-controls,
+    .editor-toolbar,
+    .lang-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    button,
+    select,
+    input,
+    textarea {
+      font: inherit;
+    }
+
+    button,
+    .fake-button {
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: var(--button-text);
+      border-radius: 12px;
+      padding: 9px 12px;
+      cursor: pointer;
+      transition: 0.18s ease;
+    }
+
+    button:hover,
+    .fake-button:hover {
+      transform: translateY(-1px);
+      background: color-mix(in srgb, var(--panel-2) 76%, white 24%);
+    }
+
+    button.primary {
+      background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 90%, white 10%), color-mix(in srgb, var(--accent) 70%, black 30%));
+      color: white;
+      border-color: transparent;
+    }
+
+    button.active,
+    .segment button.active {
+      outline: 2px solid color-mix(in srgb, var(--accent) 55%, white 45%);
+      outline-offset: 1px;
+      background: color-mix(in srgb, var(--accent) 20%, var(--panel-2) 80%);
+    }
+
+    textarea,
+    select,
+    input[type="text"],
+    input[type="number"] {
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: var(--input);
+      color: var(--text);
+      padding: 10px 12px;
+      outline: none;
+    }
+
+    textarea {
+      min-height: 260px;
+      resize: vertical;
+      font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
+      line-height: 1.45;
+      tab-size: 2;
+    }
+
+    label.small,
+    .small {
+      font-size: 0.86rem;
+      color: var(--muted);
+    }
+
+    .grid-2,
+    .grid-3,
+    .grid-4 {
+      display: grid;
+      gap: 10px;
+    }
+
+    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+    .inline-input {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    input[type="color"] {
+      width: 100%;
+      min-height: 42px;
+      padding: 4px;
+      background: var(--input);
+    }
+
+    .main {
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr) auto;
+      min-height: calc(100vh - 28px);
+    }
+
+    .toolbar {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      background: color-mix(in srgb, var(--panel) 75%, transparent 25%);
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .toolbar-left,
+    .toolbar-right {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .canvas-wrap {
+      position: relative;
+      min-height: 620px;
+      overflow: hidden;
+      background:
+        linear-gradient(var(--grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px),
+        var(--canvas);
+      background-size: 28px 28px, 28px 28px, auto;
+    }
+
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+
+    .statusbar {
+      padding: 10px 14px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--panel-2) 84%, transparent 16%);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .help {
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--panel-2) 74%, transparent 26%);
+      padding: 12px;
+      line-height: 1.55;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .help code,
+    .message code {
+      background: color-mix(in srgb, var(--panel-2) 80%, transparent 20%);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1px 6px;
+      color: var(--text);
+    }
+
+    .message {
+      margin-top: 10px;
+      border-radius: 16px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--panel-2) 75%, transparent 25%);
+      color: var(--text);
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+
+    .message.error {
+      border-color: color-mix(in srgb, var(--danger) 50%, var(--border) 50%);
+      color: color-mix(in srgb, var(--danger) 70%, var(--text) 30%);
+    }
+
+    .message.success {
+      border-color: color-mix(in srgb, var(--success) 40%, var(--border) 60%);
+      color: color-mix(in srgb, var(--success) 70%, var(--text) 30%);
+    }
+
+    .legend {
+      display: grid;
+      gap: 8px;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.25);
+      flex: 0 0 14px;
+    }
+
+    .algo-info {
+      line-height: 1.55;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .segment {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .inspector-block {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 12px;
+      background: color-mix(in srgb, var(--panel-2) 74%, transparent 26%);
+    }
+
+    .muted { color: var(--muted); }
+    .hidden { display: none !important; }
+
+    .canvas-hint {
+      position: absolute;
+      bottom: 14px;
+      right: 14px;
+      background: rgba(12, 17, 33, 0.78);
+      border: 1px solid var(--border);
+      color: #f1f5ff;
+      border-radius: 14px;
+      padding: 10px 12px;
+      font-size: 0.86rem;
+      backdrop-filter: blur(10px);
+      pointer-events: none;
+      max-width: 280px;
+      line-height: 1.45;
+    }
+
+    .editor-dock {
+      margin: 12px 12px 0 12px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: color-mix(in srgb, var(--panel-2) 76%, transparent 24%);
+      padding: 12px;
+    }
+
+    .editor-dock.disabled {
+      opacity: 0.72;
+    }
+
+    .editor-dock :disabled {
+      opacity: 0.62;
+      cursor: not-allowed;
+    }
+
+    .editor-dock .inspector-block {
+      margin-top: 12px;
+    }
+
+    .editor-dock .button-row,
+    .editor-dock .editor-toolbar {
+      margin-top: 10px;
+    }
+
+    html[data-theme="light"] .canvas-hint {
+      background: rgba(255,255,255,0.85);
+      color: #15203d;
+    }
+
+    .svg-text {
+      font-family: Inter, system-ui, sans-serif;
+      font-size: 13px;
+      pointer-events: none;
+    }
+
+    .node-circle {
+      cursor: pointer;
+      stroke: rgba(255,255,255,0.85);
+      stroke-width: 2.3;
+      transition: transform 0.15s ease, stroke-width 0.15s ease, filter 0.15s ease;
+    }
+
+    html[data-theme="light"] .node-circle {
+      stroke: rgba(20, 33, 61, 0.85);
+    }
+
+    .node-circle.current { filter: drop-shadow(0 0 14px rgba(255, 99, 132, 0.45)); }
+    .node-circle.frontier { filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.42)); }
+    .node-circle.visited { filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.4)); }
+    .node-circle.path { filter: drop-shadow(0 0 16px rgba(34, 197, 94, 0.42)); }
+    .node-circle.selected { stroke-width: 4; }
+
+    .edge-line {
+      fill: none;
+      stroke-width: 3;
+      transition: opacity 0.12s ease, stroke-width 0.15s ease, filter 0.15s ease;
+    }
+
+    .edge-line.path {
+      stroke-width: 5;
+      filter: drop-shadow(0 0 6px rgba(34,197,94,0.35));
+    }
+
+    .edge-hitbox {
+      fill: none;
+      stroke: transparent;
+      stroke-width: 18;
+      cursor: pointer;
+    }
+
+    .edge-label {
+      font-size: 11px;
+      pointer-events: none;
+    }
+
+    .wide-textarea {
+      min-height: 180px;
+    }
+
+    .algorithm-stack {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin-top: 12px;
+    }
+
+    .validation-help {
+      line-height: 1.5;
+      color: var(--muted);
+    }
+
+    body.incognito-only {
+      padding: 0;
+      overflow: hidden;
+    }
+
+    body.incognito-only .app {
+      grid-template-columns: 1fr;
+      gap: 0;
+      min-height: 100vh;
+    }
+
+    body.incognito-only .sidebar,
+    body.incognito-only .toolbar,
+    body.incognito-only .statusbar,
+    body.incognito-only .editor-dock,
+    body.incognito-only .canvas-hint {
+      display: none !important;
+    }
+
+    body.incognito-only .panel,
+    body.incognito-only .main {
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
+      min-height: 100vh;
+    }
+
+    body.incognito-only .canvas-wrap {
+      min-height: 100vh;
+      border-radius: 0;
+    }
+
+    @media (max-width: 1160px) {
+      body {
+        padding: 10px;
+      }
+
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: static;
+        top: auto;
+        max-height: none;
+        overflow: visible;
+      }
+
+      .main {
+        min-height: auto;
+      }
+
+      .canvas-wrap {
+        min-height: 56vh;
+      }
+    }
+
+    @media (max-width: 760px) {
+      body {
+        padding: 8px;
+      }
+
+      .panel {
+        border-radius: 16px;
+      }
+
+      .section,
+      .toolbar,
+      .statusbar,
+      .editor-dock {
+        padding-left: 12px;
+        padding-right: 12px;
+      }
+
+      .editor-dock {
+        margin: 8px 8px 0 8px;
+      }
+
+      .grid-2,
+      .grid-3,
+      .grid-4,
+      .algorithm-stack {
+        grid-template-columns: 1fr;
+      }
+
+      textarea {
+        min-height: 220px;
+      }
+
+      .canvas-wrap {
+        min-height: 420px;
+      }
+
+      .canvas-hint {
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+        max-width: none;
+      }
+
+      .toolbar,
+      .statusbar,
+      .topbar {
+        align-items: stretch;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="panel sidebar">
+      <section class="section">
+        <div class="topbar">
+          <div>
+            <h1 class="title" data-i18n="appTitle">გრაფის სტუდია</h1>
+            <p class="subtitle" data-i18n="appSubtitle">ტექსტური აღწერით შექმენი გრაფი, შემდეგ რედაქტირება გააკეთე მაუსით და გაუშვი DFS / BFS / A* დემონსტრაცია.</p>
+          </div>
+          <div class="lang-buttons">
+            <button id="langKaBtn" class="active">KA</button>
+            <button id="langEnBtn">EN</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="button-row">
+          <button id="drawBtn" class="primary" data-i18n="drawGraph">დახატე გრაფი</button>
+          <button id="loadSampleBtn" data-i18n="loadSample">მაგალითის ჩატვირთვა</button>
+          <button id="exportTextBtn" data-i18n="exportText">ტექსტის გენერირება</button>
+        </div>
+        <div class="message" id="messageBox"></div>
+      </section>
+
+      <section class="section">
+        <label class="small" for="graphInput" data-i18n="inputLabel">გრაფის ტექსტური აღწერა</label>
+        <textarea id="graphInput" spellcheck="false"></textarea>
+      </section>
+
+      <section class="section">
+        <div class="help" id="formatHelp"></div>
+      </section>
+
+      <section class="section">
+        <div class="grid-3">
+          <div class="inline-input">
+            <label class="small" for="defaultNodeColor" data-i18n="defaultNodeColor">ნაგულისხმევი კვანძის ფერი</label>
+            <input id="defaultNodeColor" type="color" value="#4f46e5" />
+          </div>
+          <div class="inline-input">
+            <label class="small" for="defaultEdgeColor" data-i18n="defaultEdgeColor">ნაგულისხმევი ხაზის ფერი</label>
+            <input id="defaultEdgeColor" type="color" value="#94a3b8" />
+          </div>
+          <div class="inline-input">
+            <label class="small" for="nameLengthInput" data-i18n="nameLength">სახელის სიგრძე</label>
+            <input id="nameLengthInput" type="number" min="1" max="12" step="1" value="5" />
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="topbar">
+          <strong data-i18n="algorithmDemo">ალგორითმის დემონსტრაცია</strong>
+          <span class="chip" id="demoStateChip">Idle</span>
+        </div>
+        <div class="algorithm-controls" style="margin-top:10px;">
+          <select id="algorithmSelect">
+            <option value="bfs">BFS</option>
+            <option value="dfs">DFS</option>
+            <option value="astar">A*</option>
+          </select>
+          <button id="prepareDemoBtn" data-i18n="prepareDemo">მომზადება</button>
+          <button id="nextStepBtn" data-i18n="nextStep">შემდეგი ნაბიჯი</button>
+          <button id="playDemoBtn" data-i18n="autoPlay">ავტო გაშვება</button>
+          <button id="resetDemoBtn" data-i18n="resetDemo">განულება</button>
+        </div>
+        <div class="algo-info" id="algoInfo" style="margin-top:10px;"></div>
+        <div class="legend" style="margin-top:12px;">
+          <div class="legend-item"><span class="swatch" style="background:#f87171"></span><span data-i18n="legendCurrent">მიმდინარე კვანძი</span></div>
+          <div class="legend-item"><span class="swatch" style="background:#38bdf8"></span><span data-i18n="legendFrontier">საზღვარი / Frontier</span></div>
+          <div class="legend-item"><span class="swatch" style="background:#facc15"></span><span data-i18n="legendVisited">მონახულებული</span></div>
+          <div class="legend-item"><span class="swatch" style="background:#22c55e"></span><span data-i18n="legendPath">ნაპოვნი გზა</span></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="topbar">
+          <strong data-i18n="stepTools">ნაბიჯების ტექსტი და შემოწმება</strong>
+        </div>
+        <div class="algorithm-stack">
+          <div class="inline-input">
+            <label class="small" for="stepLogOutput" data-i18n="stepLogOutputLabel">ნაბიჯების ტექსტური ჟურნალი</label>
+            <textarea id="stepLogOutput" class="wide-textarea" spellcheck="false" readonly></textarea>
+            <div class="button-row" style="margin-top:10px;">
+              <button id="copyStepLogBtn" data-i18n="copySteps">ნაბიჯების კოპირება</button>
+            </div>
+          </div>
+          <div class="inline-input">
+            <label class="small" for="stepSequenceInput" data-i18n="stepSequenceInputLabel">შესამოწმებელი მიმდევრობა</label>
+            <textarea id="stepSequenceInput" class="wide-textarea" spellcheck="false" data-i18n-placeholder="stepSequencePlaceholder"></textarea>
+            <div class="button-row" style="margin-top:10px;">
+              <button id="validateSequenceBtn" data-i18n="validateSequence">მიმდევრობის შემოწმება</button>
+              <button id="fillExpectedSequenceBtn" data-i18n="fillExpectedSequence">სწორი მიმდევრობის ჩასმა</button>
+            </div>
+            <div class="small validation-help" style="margin-top:10px;" id="sequenceHint" data-i18n="sequenceHint"></div>
+            <div class="message" id="validationMessageBox"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section hidden" id="editorPanel">
+        <div class="topbar">
+          <strong data-i18n="editor">რედაქტორი</strong>
+          <span class="chip" id="editorStateChip" data-i18n="editorOff">გამორთულია</span>
+        </div>
+
+        <div class="editor-toolbar" style="margin-top:12px;">
+          <button id="toolSelectBtn" class="active" data-i18n="toolSelect">მონიშვნა/გადაწევა</button>
+          <button id="toolAddNodeBtn" data-i18n="toolAddNode">კვანძის დამატება</button>
+          <button id="toolConnectBtn" data-i18n="toolConnect">კავშირი</button>
+          <button id="toolDeleteBtn" data-i18n="toolDelete">წაშლა</button>
+        </div>
+
+        <div class="grid-4" style="margin-top:12px;">
+          <div class="inline-input">
+            <label class="small" for="editorNodeColor" data-i18n="nodeColor">კვანძის ფერი</label>
+            <input id="editorNodeColor" type="color" value="#4f46e5" />
+          </div>
+          <div class="inline-input">
+            <label class="small" for="editorEdgeColor" data-i18n="edgeColor">ხაზის ფერი</label>
+            <input id="editorEdgeColor" type="color" value="#94a3b8" />
+          </div>
+          <div class="inline-input">
+            <label class="small" for="editorEdgeType" data-i18n="edgeType">ხაზის ტიპი</label>
+            <select id="editorEdgeType">
+              <option value="undirected">--</option>
+              <option value="directed">-&gt;</option>
+              <option value="bidirectional">&lt;&gt;</option>
+            </select>
+          </div>
+          <div class="inline-input">
+            <label class="small" for="editorWeight" data-i18n="weight">წონა</label>
+            <input id="editorWeight" type="number" min="0" step="0.1" value="1" />
+          </div>
+        </div>
+
+        <div class="button-row" style="margin-top:12px;">
+          <button id="setStartBtn" data-i18n="setAsStart">საწყისად მონიშვნა</button>
+          <button id="setGoalBtn" data-i18n="setAsGoal">მიზნად მონიშვნა</button>
+          <button id="clearStartGoalBtn" data-i18n="clearStartGoal">საწყისი/მიზნის გაწმენდა</button>
+          <button id="syncTextBtn" data-i18n="syncText">ტექსტის სინქრონიზაცია</button>
+        </div>
+
+        <div class="inspector-block" style="margin-top:12px;">
+          <strong data-i18n="properties">თვისებები</strong>
+          <div id="inspectorContent" class="small" style="margin-top:8px;"></div>
+        </div>
+      </section>
+    </aside>
+
+    <main class="panel main">
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <button id="themeBtn" data-i18n="toggleTheme">თემა</button>
+          <button id="editModeBtn" data-i18n="toggleEditor">რედაქტორი</button>
+          <button id="incognitoBtn" data-i18n="toggleIncognito">ინკოგნიტო</button>
+        </div>
+        <div class="toolbar-right">
+          <span class="chip" id="graphStatsChip">0 nodes · 0 edges</span>
+          <span class="chip" id="startGoalChip">Start: — | Goal: —</span>
+        </div>
+      </div>
+
+      <div class="canvas-wrap" id="canvasWrap">
+        <svg id="graphSvg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <marker id="arrowMarker" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto-start-reverse" markerUnits="strokeWidth">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke"></path>
+            </marker>
+          </defs>
+          <g id="edgeLayer"></g>
+          <g id="nodeLayer"></g>
+        </svg>
+        <div class="canvas-hint" id="canvasHint"></div>
+      </div>
+
+      <div class="statusbar">
+        <span id="statusText">Ready.</span>
+        <span id="selectionText">Selection: none</span>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const svgNS = "http://www.w3.org/2000/svg";
+    const START_INCOGNITO_ONLY = true;
+
+    const i18n = {
+      ka: {
+        appTitle: "გრაფის სტუდია",
+        appSubtitle: "ტექსტური აღწერით შექმენი გრაფი, შემდეგ რედაქტირება გააკეთე მაუსით და გაუშვი DFS / BFS / A* დემონსტრაცია.",
+        drawGraph: "დახატე გრაფი",
+        loadSample: "მაგალითის ჩატვირთვა",
+        exportText: "ტექსტის გენერირება",
+        inputLabel: "გრაფის ტექსტური აღწერა",
+        defaultNodeColor: "ნაგულისხმევი კვანძის ფერი",
+        defaultEdgeColor: "ნაგულისხმევი ხაზის ფერი",
+        nameLength: "სახელის სიგრძე",
+        algorithmDemo: "ალგორითმის დემონსტრაცია",
+        prepareDemo: "მომზადება",
+        nextStep: "შემდეგი ნაბიჯი",
+        autoPlay: "ავტო გაშვება",
+        resetDemo: "განულება",
+        legendCurrent: "მიმდინარე კვანძი",
+        legendFrontier: "საზღვარი / Frontier",
+        legendVisited: "მონახულებული",
+        legendPath: "ნაპოვნი გზა",
+        editor: "რედაქტორი",
+        editorOff: "გამორთულია",
+        editorOn: "ჩართულია",
+        toolSelect: "მონიშვნა/გადაწევა",
+        toolAddNode: "კვანძის დამატება",
+        toolConnect: "კავშირი",
+        toolDelete: "წაშლა",
+        nodeColor: "კვანძის ფერი",
+        edgeColor: "ხაზის ფერი",
+        edgeType: "ხაზის ტიპი",
+        weight: "წონა",
+        setAsStart: "საწყისად მონიშვნა",
+        setAsGoal: "მიზნად მონიშვნა",
+        clearStartGoal: "საწყისი/მიზნის გაწმენდა",
+        syncText: "ტექსტის სინქრონიზაცია",
+        properties: "თვისებები",
+        toggleTheme: "თემა",
+        toggleEditor: "რედაქტორი",
+        toggleIncognito: "ინკოგნიტო",
+        ready: "მზადაა.",
+        selectionNone: "მონიშნული: არაფერი",
+        selectionNode: "მონიშნული კვანძი: {id}",
+        selectionEdge: "მონიშნული ხაზი: {from} {sym} {to}",
+        stats: "{nodes} კვანძი · {edges} ხაზი",
+        startGoal: "საწყისი: {start} | მიზანი: {goal}",
+        none: "—",
+        formatHelp: `რეკომენდებული ტექსტური ფორმატი:\n\n<code>CONFIG NAME_LENGTH 5</code>\n<code>CONFIG DEFAULT_NODE_COLOR #4F46E5</code>\n<code>CONFIG DEFAULT_EDGE_COLOR #94A3B8</code>\n<code>START A0001</code>\n<code>GOAL G0001</code>\n<code>NODE A0001 180 180 #22C55E</code>\n<code>NODE B0002 420 150 #0EA5E9</code>\n<code>EDGE A0001 -> B0002 #F97316 2</code>\n<code>EDGE B0002 -- C0003 #94A3B8 1</code>\n<code>EDGE C0003 <> G0001 #A855F7 3</code>\n\nკვანძისთვის ფერი სურვილისამებრია. ხაზისთვის ფერი და წონა სურვილისამებრია. ტიპები: <code>--</code>, <code>-></code>, <code>&lt;&gt;</code>. A* იყენებს კვანძების კოორდინატებზე დაფუძნებულ ევრისტიკას.`,
+        canvasHintNormal: "რეჟიმები: მონიშვნა/გადაწევა, კვანძის დამატება, კავშირი, წაშლა. ორმაგი დაკლიკებით კვანძს სახელს შეუცვლი.",
+        canvasHintConnect: "კავშირის რეჟიმი: ჯერ დააჭირე საწყის კვანძს, შემდეგ სამიზნეს.",
+        canvasHintAdd: "კვანძის დამატების რეჟიმი: ცარიელ სივრცეზე დაკლიკებით შეიქმნება ახალი კვანძი.",
+        messageParseSuccess: "გრაფი წარმატებით დაიხატა.",
+        messageSampleLoaded: "მაგალითი ჩაიტვირთა. დააჭირე „დახატე გრაფი“ ან უბრალოდ შეცვალე ტექსტი.",
+        messageExported: "მიმდინარე გრაფი გადაიტანეს ტექსტურ ველში.",
+        parseErrorPrefix: "პარსინგის შეცდომა:",
+        missingNode: "კვანძი არ არსებობს: {id}",
+        duplicateNode: "კვანძი უკვე არსებობს: {id}",
+        badNameLength: "კვანძის სახელი უნდა იყოს არაუმეტეს {len} სიმბოლოსი: {id}",
+        demoNeedsStartGoal: "დემოსთვის საჭიროა საწყისი და მიზნის კვანძები.",
+        demoNotReady: "ჯერ მოამზადე დემო.",
+        demoPrepared: "დემო მომზადებულია: {algo}. ნაბიჯები: {count}",
+        demoFinished: "დემო დასრულდა.",
+        noPath: "გზა ვერ მოიძებნა.",
+        pathFound: "გზა ნაპოვნია: {path}",
+        demoStateIdle: "უქმე",
+        demoStateReady: "მზად",
+        demoStatePlaying: "მიმდინარეობს",
+        demoStepInfo: "ნაბიჯი {index}/{total}. მიმდინარე: {current}. საზღვარი: {frontier}. მონახულებული: {visited}.",
+        demoSolvedInfo: "ნაბიჯი {index}/{total}. მიზანი მიღწეულია. გზა: {path}",
+        editModeEnabled: "რედაქტორი ჩართულია.",
+        editModeDisabled: "რედაქტორი გამორთულია.",
+        incognitoOn: "ინკოგნიტო ჩართულია. ხაზები და სახელები იმალება, ხოლო მაუსის მიახლოებისას ჩნდება.",
+        incognitoOff: "ინკოგნიტო გამორთულია.",
+        toolSet: "აქტიური ინსტრუმენტი: {tool}",
+        newNodeAdded: "ახალი კვანძი დაემატა: {id}",
+        edgeCreated: "კავშირი შეიქმნა: {from} {sym} {to}",
+        deletedNode: "კვანძი წაიშალა: {id}",
+        deletedEdge: "ხაზი წაიშალა.",
+        setStartMsg: "საწყისი კვანძი დაყენებულია: {id}",
+        setGoalMsg: "მიზნის კვანძი დაყენებულია: {id}",
+        clearedStartGoalMsg: "საწყისი და მიზანი გასუფთავდა.",
+        needSelectedNode: "ჯერ მონიშნე კვანძი.",
+        inspectorEmpty: "ჯერ არაფერი გაქვს მონიშნული.",
+        inspectorNode: "კვანძი {id}",
+        inspectorEdge: "ხაზი {from} {sym} {to}",
+        renamePrompt: "შეიყვანე კვანძის ახალი სახელი (მაქსიმუმ {len} სიმბოლო):",
+        badGeneratedId: "თავისუფალი სახელის გენერირება ვერ მოხერხდა.",
+        startShort: "საწყისი",
+        goalShort: "მიზანი",
+        hoverReveal: "ინკოგნიტო რეჟიმში გადაუსვი მაუსი კვანძს ან ხაზს, რომ გამოჩნდეს.",
+        idleAlgoText: "თუ საწყისი და მიზანი არსებობს, შეგიძლია მოამზადო BFS, DFS ან A* და ნაბიჯ-ნაბიჯ ნახო ძებნის პროცესი.",
+        autoStopped: "ავტო გაშვება შეჩერდა.",
+        invalidWeight: "წონა უნდა იყოს რიცხვი და უარყოფითი არ იყოს.",
+        toolNameSelect: "მონიშვნა/გადაწევა",
+        toolNameAdd: "კვანძის დამატება",
+        toolNameConnect: "კავშირი",
+        toolNameDelete: "წაშლა",
+        stepTools: "ნაბიჯების ტექსტი და შემოწმება",
+        stepLogOutputLabel: "ნაბიჯების ტექსტური ჟურნალი",
+        copySteps: "ნაბიჯების კოპირება",
+        copyStepsSuccess: "ნაბიჯების ტექსტი დაკოპირდა.",
+        stepSequenceInputLabel: "შესამოწმებელი მიმდევრობა",
+        stepSequencePlaceholder: "მაგ.: A0001 → B0002 → D0004 → G0001",
+        validateSequence: "მიმდევრობის შემოწმება",
+        fillExpectedSequence: "სწორი მიმდევრობის ჩასმა",
+        sequenceHint: "შეიყვანე მხოლოდ იმ კვანძების მიმდევრობა, რომლებიც ალგორითმის მიხედვით მიმდინარე/გაფართოებულ კვანძებად ჩნდება. გამყოფებად შეიძლება გამოიყენო → , მძიმე, ახალი ხაზი ან გამოტოვება.",
+        validationEmpty: "შესამოწმებელი მიმდევრობა ცარიელია.",
+        validationCorrect: "მიმდევრობა სწორია.",
+        validationWrong: "მიმდევრობა არასწორია. პირველი აცდენა არის პოზიციაზე {index}: შენ მიუთითე {actual}, სწორი იყო {expected}.",
+        validationLengthMismatch: "მიმდევრობის სიგრძე არ ემთხვევა. შენ მიუთითე {actualCount}, სწორი რაოდენობაა {expectedCount}.",
+        expectedSequenceLabel: "სწორი მიმდევრობა",
+        yourSequenceLabel: "შენი მიმდევრობა",
+        noExpectedSequence: "ამ გრაფისთვის მიმდევრობა ვერ განისაზღვრა.",
+        stepLogIdle: "ჯერ მოამზადე BFS / DFS / A* დემო, რომ ნაბიჯების ტექსტური ჟურნალი გამოჩნდეს.",
+        stepLogHeader: "ალგორითმი: {algo}\nსაწყისი: {start}\nმიზანი: {goal}\nსწორი მიმდევრობა: {sequence}",
+        stepLogStep: "ნაბიჯი {index}/{total}: CURRENT={current}; FRONTIER=[{frontier}]; VISITED=[{visited}]",
+        stepLogFinalPath: "ნაპოვნი გზა: {path}",
+        stepLogNoPath: "გზა ვერ მოიძებნა.",
+        incognitoOnlyEnabled: "ინკოგნიტო-სტარტ რეჟიმი ჩართულია: ჩანს მხოლოდ გრაფი."
+      },
+      en: {
+        appTitle: "Graph Studio",
+        appSubtitle: "Create a graph from text, then edit it with the mouse and run DFS / BFS / A* demonstrations.",
+        drawGraph: "Draw graph",
+        loadSample: "Load sample",
+        exportText: "Generate text",
+        inputLabel: "Text description of the graph",
+        defaultNodeColor: "Default node color",
+        defaultEdgeColor: "Default edge color",
+        nameLength: "Name length",
+        algorithmDemo: "Algorithm demonstration",
+        prepareDemo: "Prepare",
+        nextStep: "Next step",
+        autoPlay: "Auto play",
+        resetDemo: "Reset",
+        legendCurrent: "Current node",
+        legendFrontier: "Frontier",
+        legendVisited: "Visited",
+        legendPath: "Found path",
+        editor: "Editor",
+        editorOff: "Off",
+        editorOn: "On",
+        toolSelect: "Select / drag",
+        toolAddNode: "Add node",
+        toolConnect: "Connect",
+        toolDelete: "Delete",
+        nodeColor: "Node color",
+        edgeColor: "Edge color",
+        edgeType: "Edge type",
+        weight: "Weight",
+        setAsStart: "Set as start",
+        setAsGoal: "Set as goal",
+        clearStartGoal: "Clear start/goal",
+        syncText: "Sync text",
+        properties: "Properties",
+        toggleTheme: "Theme",
+        toggleEditor: "Editor",
+        toggleIncognito: "Incognito",
+        ready: "Ready.",
+        selectionNone: "Selection: none",
+        selectionNode: "Selected node: {id}",
+        selectionEdge: "Selected edge: {from} {sym} {to}",
+        stats: "{nodes} nodes · {edges} edges",
+        startGoal: "Start: {start} | Goal: {goal}",
+        none: "—",
+        formatHelp: `Recommended text format:\n\n<code>CONFIG NAME_LENGTH 5</code>\n<code>CONFIG DEFAULT_NODE_COLOR #4F46E5</code>\n<code>CONFIG DEFAULT_EDGE_COLOR #94A3B8</code>\n<code>START A0001</code>\n<code>GOAL G0001</code>\n<code>NODE A0001 180 180 #22C55E</code>\n<code>NODE B0002 420 150 #0EA5E9</code>\n<code>EDGE A0001 -> B0002 #F97316 2</code>\n<code>EDGE B0002 -- C0003 #94A3B8 1</code>\n<code>EDGE C0003 <> G0001 #A855F7 3</code>\n\nNode color is optional. Edge color and weight are optional. Types: <code>--</code>, <code>-></code>, <code>&lt;&gt;</code>. A* uses a heuristic derived from node coordinates.`,
+        canvasHintNormal: "Modes: select/drag, add node, connect, delete. Double click a node to rename it.",
+        canvasHintConnect: "Connect mode: click the source node first, then the target node.",
+        canvasHintAdd: "Add-node mode: click empty space to create a new node.",
+        messageParseSuccess: "Graph rendered successfully.",
+        messageSampleLoaded: "Sample loaded. Press “Draw graph” or edit the text directly.",
+        messageExported: "The current graph was exported back into the text area.",
+        parseErrorPrefix: "Parse error:",
+        missingNode: "Node does not exist: {id}",
+        duplicateNode: "Node already exists: {id}",
+        badNameLength: "Node name must be at most {len} characters: {id}",
+        demoNeedsStartGoal: "The demo requires both a start node and a goal node.",
+        demoNotReady: "Prepare the demo first.",
+        demoPrepared: "Demo prepared: {algo}. Steps: {count}",
+        demoFinished: "Demo finished.",
+        noPath: "No path was found.",
+        pathFound: "Path found: {path}",
+        demoStateIdle: "Idle",
+        demoStateReady: "Ready",
+        demoStatePlaying: "Playing",
+        demoStepInfo: "Step {index}/{total}. Current: {current}. Frontier: {frontier}. Visited: {visited}.",
+        demoSolvedInfo: "Step {index}/{total}. Goal reached. Path: {path}",
+        editModeEnabled: "Editor enabled.",
+        editModeDisabled: "Editor disabled.",
+        incognitoOn: "Incognito enabled. Edges and names are hidden until the mouse approaches them.",
+        incognitoOff: "Incognito disabled.",
+        toolSet: "Active tool: {tool}",
+        newNodeAdded: "New node added: {id}",
+        edgeCreated: "Edge created: {from} {sym} {to}",
+        deletedNode: "Node deleted: {id}",
+        deletedEdge: "Edge deleted.",
+        setStartMsg: "Start node set to: {id}",
+        setGoalMsg: "Goal node set to: {id}",
+        clearedStartGoalMsg: "Start and goal cleared.",
+        needSelectedNode: "Select a node first.",
+        inspectorEmpty: "Nothing is selected yet.",
+        inspectorNode: "Node {id}",
+        inspectorEdge: "Edge {from} {sym} {to}",
+        renamePrompt: "Enter a new node name (max {len} characters):",
+        badGeneratedId: "Could not generate a free node name.",
+        startShort: "Start",
+        goalShort: "Goal",
+        hoverReveal: "In incognito mode, move the mouse over a node or an edge to reveal it.",
+        idleAlgoText: "If a start and goal are defined, you can prepare BFS, DFS, or A* and step through the search process.",
+        autoStopped: "Auto play stopped.",
+        invalidWeight: "Weight must be numeric and non-negative.",
+        toolNameSelect: "Select / drag",
+        toolNameAdd: "Add node",
+        toolNameConnect: "Connect",
+        toolNameDelete: "Delete",
+        stepTools: "Step text and validation",
+        stepLogOutputLabel: "Textual step log",
+        copySteps: "Copy steps",
+        copyStepsSuccess: "The step log was copied.",
+        stepSequenceInputLabel: "Sequence to validate",
+        stepSequencePlaceholder: "Example: A0001 → B0002 → D0004 → G0001",
+        validateSequence: "Validate sequence",
+        fillExpectedSequence: "Insert correct sequence",
+        sequenceHint: "Enter only the node order in which the algorithm makes them the current/expanded node. You may separate tokens with →, commas, spaces, or new lines.",
+        validationEmpty: "The sequence to validate is empty.",
+        validationCorrect: "The sequence is correct.",
+        validationWrong: "The sequence is incorrect. The first mismatch is at position {index}: you entered {actual}, but the correct value is {expected}.",
+        validationLengthMismatch: "The sequence length does not match. You entered {actualCount}, but the correct length is {expectedCount}.",
+        expectedSequenceLabel: "Correct sequence",
+        yourSequenceLabel: "Your sequence",
+        noExpectedSequence: "No sequence could be determined for this graph.",
+        stepLogIdle: "Prepare a BFS / DFS / A* demo first to generate the textual step log.",
+        stepLogHeader: "Algorithm: {algo}\nStart: {start}\nGoal: {goal}\nCorrect sequence: {sequence}",
+        stepLogStep: "Step {index}/{total}: CURRENT={current}; FRONTIER=[{frontier}]; VISITED=[{visited}]",
+        stepLogFinalPath: "Found path: {path}",
+        stepLogNoPath: "No path was found.",
+        incognitoOnlyEnabled: "Incognito startup mode is enabled: only the graph is visible."
+      }
+    };
+
+    function t(key, vars = {}) {
+      const langDict = i18n[state.lang] || i18n.ka;
+      let text = langDict[key] ?? key;
+      for (const [name, value] of Object.entries(vars)) {
+        text = text.replaceAll(`{${name}}`, value);
+      }
+      return text;
+    }
+
+    const sampleGraphText = `# BFS Quiz Variant 01
+CONFIG NAME_LENGTH 5
+CONFIG DEFAULT_NODE_COLOR #7F31C4
+CONFIG DEFAULT_EDGE_COLOR #5C0A63
+START PRISM
+GOAL NIMBO
+
+NODE PRISM 120 223 #EF4444
+NODE TARO 260 106 #84CC16
+NODE YONI 260 307 #F59E0B
+NODE GIVA 420 78 #06B6D4
+NODE JARO 420 198 #14B8A6
+NODE ROGUE 420 327 #F97316
+NODE MIRA 580 112 #8B5CF6
+NODE UMBRA 580 247 #EC4899
+NODE HERA 580 362 #0EA5E9
+NODE NIMBO 760 227 #22C55E
+
+EDGE PRISM -> TARO #1963C5 1
+EDGE PRISM -> YONI #7131A3 1
+EDGE TARO -> GIVA #17D9AF 1
+EDGE TARO <> JARO #442F7D 1
+EDGE YONI -- JARO #9447AB 1
+EDGE YONI -> ROGUE #D69964 2
+EDGE GIVA -> MIRA #49DBCD 1
+EDGE JARO <> UMBRA #3C4F43 1
+EDGE ROGUE -> HERA #9DF154 1
+EDGE UMBRA -> NIMBO #5C882B 2
+EDGE HERA -> NIMBO #34C3B7 1
+EDGE JARO -> NIMBO #6030A1 4
+EDGE GIVA -- JARO #BEAAE4 1
+EDGE GIVA -> UMBRA #FE2A0A 2`;
+
+    let graphText = sampleGraphText;
+
+    const state = {
+      lang: 'en',
+      theme: 'light',
+      editMode: true,
+      incognito: false,
+      editorTool: 'select',
+      connectFrom: null,
+      selected: { type: null, id: null },
+      draggingNodeId: null,
+      dragOffset: { x: 0, y: 0 },
+      dragMoved: false,
+      justDragged: false,
+      hoveredNodeId: null,
+      hoveredEdgeId: null,
+      graph: createEmptyGraph(),
+      incognitoOnly: START_INCOGNITO_ONLY,
+      demo: {
+        algorithm: 'bfs',
+        prepared: false,
+        steps: [],
+        index: -1,
+        timer: null,
+        finalPath: [],
+        canonicalSequence: []
+      }
+    };
+
+    const els = {
+      html: document.documentElement,
+      graphInput: document.getElementById('graphInput'),
+      drawBtn: document.getElementById('drawBtn'),
+      loadSampleBtn: document.getElementById('loadSampleBtn'),
+      exportTextBtn: document.getElementById('exportTextBtn'),
+      messageBox: document.getElementById('messageBox'),
+      graphSvg: document.getElementById('graphSvg'),
+      edgeLayer: document.getElementById('edgeLayer'),
+      nodeLayer: document.getElementById('nodeLayer'),
+      statusText: document.getElementById('statusText'),
+      selectionText: document.getElementById('selectionText'),
+      themeBtn: document.getElementById('themeBtn'),
+      editModeBtn: document.getElementById('editModeBtn'),
+      incognitoBtn: document.getElementById('incognitoBtn'),
+      graphStatsChip: document.getElementById('graphStatsChip'),
+      startGoalChip: document.getElementById('startGoalChip'),
+      canvasWrap: document.getElementById('canvasWrap'),
+      mainPanel: document.querySelector('.main'),
+      canvasHint: document.getElementById('canvasHint'),
+      formatHelp: document.getElementById('formatHelp'),
+      defaultNodeColor: document.getElementById('defaultNodeColor'),
+      defaultEdgeColor: document.getElementById('defaultEdgeColor'),
+      nameLengthInput: document.getElementById('nameLengthInput'),
+      algorithmSelect: document.getElementById('algorithmSelect'),
+      prepareDemoBtn: document.getElementById('prepareDemoBtn'),
+      nextStepBtn: document.getElementById('nextStepBtn'),
+      playDemoBtn: document.getElementById('playDemoBtn'),
+      resetDemoBtn: document.getElementById('resetDemoBtn'),
+      demoStateChip: document.getElementById('demoStateChip'),
+      algoInfo: document.getElementById('algoInfo'),
+      stepLogOutput: document.getElementById('stepLogOutput'),
+      copyStepLogBtn: document.getElementById('copyStepLogBtn'),
+      stepSequenceInput: document.getElementById('stepSequenceInput'),
+      validateSequenceBtn: document.getElementById('validateSequenceBtn'),
+      fillExpectedSequenceBtn: document.getElementById('fillExpectedSequenceBtn'),
+      validationMessageBox: document.getElementById('validationMessageBox'),
+      editorPanel: document.getElementById('editorPanel'),
+      editorStateChip: document.getElementById('editorStateChip'),
+      toolSelectBtn: document.getElementById('toolSelectBtn'),
+      toolAddNodeBtn: document.getElementById('toolAddNodeBtn'),
+      toolConnectBtn: document.getElementById('toolConnectBtn'),
+      toolDeleteBtn: document.getElementById('toolDeleteBtn'),
+      editorNodeColor: document.getElementById('editorNodeColor'),
+      editorEdgeColor: document.getElementById('editorEdgeColor'),
+      editorEdgeType: document.getElementById('editorEdgeType'),
+      editorWeight: document.getElementById('editorWeight'),
+      setStartBtn: document.getElementById('setStartBtn'),
+      setGoalBtn: document.getElementById('setGoalBtn'),
+      clearStartGoalBtn: document.getElementById('clearStartGoalBtn'),
+      syncTextBtn: document.getElementById('syncTextBtn'),
+      inspectorContent: document.getElementById('inspectorContent'),
+      langKaBtn: document.getElementById('langKaBtn'),
+      langEnBtn: document.getElementById('langEnBtn')
+    };
+
+    function createEmptyGraph() {
+      return {
+        config: {
+          nameLength: 5,
+          defaultNodeColor: '#4f46e5',
+          defaultEdgeColor: '#94a3b8'
+        },
+        nodes: [],
+        edges: [],
+        start: null,
+        goal: null
+      };
+    }
+
+    function setMessage(message, kind = '') {
+      els.messageBox.textContent = message;
+      els.messageBox.className = `message${kind ? ' ' + kind : ''}`;
+    }
+
+    function setValidationMessage(message, kind = '') {
+      if (!els.validationMessageBox) return;
+      els.validationMessageBox.textContent = message;
+      els.validationMessageBox.className = `message${kind ? ' ' + kind : ''}`;
+    }
+
+    function setStatus(message) {
+      els.statusText.textContent = message;
+    }
+
+    function setSelection(type = null, id = null) {
+      state.selected = { type, id };
+      updateSelectionStatus();
+      updateInspector();
+      renderGraph();
+    }
+
+    function updateSelectionStatus() {
+      if (!state.selected.type) {
+        els.selectionText.textContent = t('selectionNone');
+        return;
+      }
+      if (state.selected.type === 'node') {
+        els.selectionText.textContent = t('selectionNode', { id: state.selected.id });
+      } else {
+        const edge = state.graph.edges.find(e => e.id === state.selected.id);
+        if (!edge) {
+          els.selectionText.textContent = t('selectionNone');
+          return;
+        }
+        els.selectionText.textContent = t('selectionEdge', { from: edge.from, sym: edgeTypeSymbol(edge.type), to: edge.to });
+      }
+    }
+
+    function edgeTypeSymbol(type) {
+      if (type === 'directed') return '->';
+      if (type === 'bidirectional') return '<>';
+      return '--';
+    }
+
+    function symbolToEdgeType(symbol) {
+      if (symbol === '->') return 'directed';
+      if (symbol === '<>') return 'bidirectional';
+      return 'undirected';
+    }
+
+    function parseGraphText(text) {
+      const graph = createEmptyGraph();
+      const lines = text.split(/\r?\n/);
+      const nodeIds = new Set();
+      let edgeCounter = 1;
+
+      const configKeys = {
+        NAME_LENGTH: value => {
+          const n = Number(value);
+          if (!Number.isInteger(n) || n < 1 || n > 12) throw new Error('NAME_LENGTH must be an integer between 1 and 12.');
+          graph.config.nameLength = n;
+        },
+        DEFAULT_NODE_COLOR: value => { graph.config.defaultNodeColor = normalizeColor(value); },
+        DEFAULT_EDGE_COLOR: value => { graph.config.defaultEdgeColor = normalizeColor(value); }
+      };
+
+      for (let i = 0; i < lines.length; i++) {
+        const rawLine = lines[i];
+        const line = rawLine.trim();
+        if (!line || line.startsWith('#') || line.startsWith('//')) continue;
+
+        const parts = line.split(/\s+/);
+        const command = parts[0]?.toUpperCase();
+
+        if (command === 'CONFIG') {
+          const key = parts[1]?.toUpperCase();
+          const value = parts.slice(2).join(' ');
+          if (!key || !value || !configKeys[key]) throw new Error(`Line ${i + 1}: invalid CONFIG line.`);
+          configKeys[key](value);
+          continue;
+        }
+
+        if (command === 'START' || command === 'GOAL') {
+          const id = parts[1];
+          if (!id) throw new Error(`Line ${i + 1}: ${command} requires a node id.`);
+          if (command === 'START') graph.start = id;
+          else graph.goal = id;
+          continue;
+        }
+
+        if (command === 'NODE') {
+          const id = parts[1];
+          const x = Number(parts[2]);
+          const y = Number(parts[3]);
+          const color = parts[4] ? normalizeColor(parts[4]) : graph.config.defaultNodeColor;
+
+          if (!id || Number.isNaN(x) || Number.isNaN(y)) throw new Error(`Line ${i + 1}: invalid NODE syntax.`);
+          if (nodeIds.has(id)) throw new Error(t('duplicateNode', { id }));
+          nodeIds.add(id);
+          graph.nodes.push({ id, x, y, color });
+          continue;
+        }
+
+        if (command === 'EDGE') {
+          const from = parts[1];
+          const symbol = parts[2];
+          const to = parts[3];
+          const color = parts[4] ? normalizeColor(parts[4]) : graph.config.defaultEdgeColor;
+          const weight = parts[5] === undefined ? 1 : Number(parts[5]);
+          if (!from || !symbol || !to || !['--', '->', '<>'].includes(symbol)) {
+            throw new Error(`Line ${i + 1}: invalid EDGE syntax.`);
+          }
+          if (Number.isNaN(weight) || weight < 0) throw new Error(t('invalidWeight'));
+          graph.edges.push({
+            id: `e${edgeCounter++}`,
+            from,
+            to,
+            type: symbolToEdgeType(symbol),
+            color,
+            weight
+          });
+          continue;
+        }
+
+        throw new Error(`Line ${i + 1}: unknown command ${command}.`);
+      }
+
+      for (const node of graph.nodes) {
+        if (String(node.id).length > graph.config.nameLength) {
+          throw new Error(t('badNameLength', { len: String(graph.config.nameLength), id: node.id }));
+        }
+      }
+
+      const available = new Set(graph.nodes.map(n => n.id));
+      for (const edge of graph.edges) {
+        if (!available.has(edge.from)) throw new Error(t('missingNode', { id: edge.from }));
+        if (!available.has(edge.to)) throw new Error(t('missingNode', { id: edge.to }));
+      }
+      if (graph.start && !available.has(graph.start)) throw new Error(t('missingNode', { id: graph.start }));
+      if (graph.goal && !available.has(graph.goal)) throw new Error(t('missingNode', { id: graph.goal }));
+
+      return graph;
+    }
+
+    function normalizeColor(color) {
+      if (!/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(color)) {
+        throw new Error(`Invalid color: ${color}`);
+      }
+      return color;
+    }
+
+    function graphToText(graph) {
+      const lines = [];
+      lines.push(`CONFIG NAME_LENGTH ${graph.config.nameLength}`);
+      lines.push(`CONFIG DEFAULT_NODE_COLOR ${graph.config.defaultNodeColor}`);
+      lines.push(`CONFIG DEFAULT_EDGE_COLOR ${graph.config.defaultEdgeColor}`);
+      if (graph.start) lines.push(`START ${graph.start}`);
+      if (graph.goal) lines.push(`GOAL ${graph.goal}`);
+      for (const node of graph.nodes) {
+        lines.push(`NODE ${node.id} ${round(node.x)} ${round(node.y)} ${node.color}`);
+      }
+      for (const edge of graph.edges) {
+        lines.push(`EDGE ${edge.from} ${edgeTypeSymbol(edge.type)} ${edge.to} ${edge.color} ${edge.weight}`);
+      }
+      return lines.join('\n');
+    }
+
+    function round(value) {
+      return Number(Number(value).toFixed(1));
+    }
+
+    function applyGraph(graph) {
+      state.graph = cloneGraph(graph);
+      els.defaultNodeColor.value = state.graph.config.defaultNodeColor;
+      els.defaultEdgeColor.value = state.graph.config.defaultEdgeColor;
+      els.nameLengthInput.value = String(state.graph.config.nameLength);
+      els.editorNodeColor.value = state.graph.config.defaultNodeColor;
+      els.editorEdgeColor.value = state.graph.config.defaultEdgeColor;
+      resetDemoState();
+      setSelection(null, null);
+      renderGraph();
+      updateUiState();
+    }
+
+    function cloneGraph(graph) {
+      return {
+        config: { ...graph.config },
+        nodes: graph.nodes.map(n => ({ ...n })),
+        edges: graph.edges.map(e => ({ ...e })),
+        start: graph.start,
+        goal: graph.goal
+      };
+    }
+
+    function updateUiText() {
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        el.textContent = t(key);
+      });
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        el.setAttribute('placeholder', t(key));
+      });
+      els.formatHelp.innerHTML = t('formatHelp');
+      updateStepLogOutput();
+      updateUiState();
+      updateInspector();
+      updateSelectionStatus();
+    }
+
+    function updateUiState() {
+      els.html.lang = state.lang;
+      els.langKaBtn.classList.toggle('active', state.lang === 'ka');
+      els.langEnBtn.classList.toggle('active', state.lang === 'en');
+      els.editorPanel.classList.remove('hidden');
+      els.editorPanel.classList.toggle('editor-dock', true);
+      els.editorPanel.classList.toggle('disabled', !state.editMode);
+      els.editorStateChip.textContent = state.editMode ? t('editorOn') : t('editorOff');
+      els.editModeBtn.classList.toggle('active', state.editMode);
+      els.incognitoBtn.classList.toggle('active', state.incognito);
+      els.themeBtn.classList.toggle('active', state.theme === 'dark');
+      els.toolSelectBtn.classList.toggle('active', state.editorTool === 'select');
+      els.toolAddNodeBtn.classList.toggle('active', state.editorTool === 'add-node');
+      els.toolConnectBtn.classList.toggle('active', state.editorTool === 'connect');
+      els.toolDeleteBtn.classList.toggle('active', state.editorTool === 'delete');
+      els.graphStatsChip.textContent = t('stats', { nodes: String(state.graph.nodes.length), edges: String(state.graph.edges.length) });
+      els.startGoalChip.textContent = t('startGoal', {
+        start: state.graph.start || t('none'),
+        goal: state.graph.goal || t('none')
+      });
+      if (state.editorTool === 'connect') {
+        els.canvasHint.textContent = t('canvasHintConnect');
+      } else if (state.editorTool === 'add-node') {
+        els.canvasHint.textContent = t('canvasHintAdd');
+      } else if (state.incognito) {
+        els.canvasHint.textContent = t('hoverReveal');
+      } else {
+        els.canvasHint.textContent = t('canvasHintNormal');
+      }
+      const demoState = state.demo.prepared
+        ? (state.demo.timer ? t('demoStatePlaying') : t('demoStateReady'))
+        : t('demoStateIdle');
+      els.demoStateChip.textContent = demoState;
+      if (!state.demo.prepared) {
+        els.algoInfo.textContent = t('idleAlgoText');
+      }
+      syncEditorPanelState();
+    }
+
+
+    function syncEditorPanelState() {
+      const controls = els.editorPanel.querySelectorAll('button, input, select, textarea');
+      controls.forEach(control => {
+        control.disabled = !state.editMode;
+      });
+    }
+
+    function renderGraph() {
+      while (els.edgeLayer.firstChild) els.edgeLayer.removeChild(els.edgeLayer.firstChild);
+      while (els.nodeLayer.firstChild) els.nodeLayer.removeChild(els.nodeLayer.firstChild);
+
+      const nodeMap = new Map(state.graph.nodes.map(n => [n.id, n]));
+      const step = getCurrentDemoStep();
+      const current = step?.current || null;
+      const frontier = new Set(step?.frontier || []);
+      const visited = new Set(step?.visited || []);
+      const pathNodes = new Set(step?.path || []);
+      const pathEdges = new Set(pathToEdgeIds(step?.path || []));
+      const visibleIncognitoEdges = new Set(getIncognitoVisibleEdgeIds());
+      const visibleIncognitoLabels = new Set(getIncognitoVisibleLabelIds());
+
+      for (const edge of state.graph.edges) {
+        const fromNode = nodeMap.get(edge.from);
+        const toNode = nodeMap.get(edge.to);
+        if (!fromNode || !toNode) continue;
+
+        const group = document.createElementNS(svgNS, 'g');
+        group.dataset.edgeId = edge.id;
+        group.setAttribute('data-edge-id', edge.id);
+
+        const { x1, y1, x2, y2, mx, my } = shortenLine(fromNode.x, fromNode.y, toNode.x, toNode.y, 27, 27);
+        const pathData = `M ${x1} ${y1} L ${x2} ${y2}`;
+
+        const visiblePath = document.createElementNS(svgNS, 'path');
+        visiblePath.setAttribute('d', pathData);
+        visiblePath.setAttribute('class', `edge-line${pathEdges.has(edge.id) ? ' path' : ''}`);
+        visiblePath.setAttribute('stroke', pathEdges.has(edge.id) ? '#22c55e' : edge.color);
+        if (edge.type === 'directed' || edge.type === 'bidirectional') {
+          visiblePath.setAttribute('marker-end', 'url(#arrowMarker)');
+        }
+        if (edge.type === 'bidirectional') {
+          visiblePath.setAttribute('marker-start', 'url(#arrowMarker)');
+        }
+
+        const reveal = !state.incognito || visibleIncognitoEdges.has(edge.id);
+        visiblePath.setAttribute('opacity', reveal ? '1' : '0');
+
+        const hitPath = document.createElementNS(svgNS, 'path');
+        hitPath.setAttribute('d', pathData);
+        hitPath.setAttribute('class', 'edge-hitbox');
+        hitPath.setAttribute('data-edge-id', edge.id);
+        visiblePath.setAttribute('data-edge-id', edge.id);
+
+        group.appendChild(visiblePath);
+        group.appendChild(hitPath);
+
+        const weightText = document.createElementNS(svgNS, 'text');
+        weightText.setAttribute('x', mx);
+        weightText.setAttribute('y', my - 8);
+        weightText.setAttribute('text-anchor', 'middle');
+        weightText.setAttribute('class', 'svg-text edge-label');
+        weightText.setAttribute('fill', pathEdges.has(edge.id) ? '#22c55e' : edge.color);
+        weightText.setAttribute('opacity', reveal ? '1' : '0');
+        weightText.textContent = String(edge.weight);
+        group.appendChild(weightText);
+
+        if (state.selected.type === 'edge' && state.selected.id === edge.id) {
+          visiblePath.setAttribute('stroke-width', '5.5');
+          visiblePath.setAttribute('filter', 'drop-shadow(0 0 10px rgba(124,156,255,0.4))');
+        }
+
+        els.edgeLayer.appendChild(group);
+      }
+
+      for (const node of state.graph.nodes) {
+        const group = document.createElementNS(svgNS, 'g');
+        group.dataset.nodeId = node.id;
+        group.setAttribute('data-node-id', node.id);
+
+        const circle = document.createElementNS(svgNS, 'circle');
+        circle.setAttribute('cx', node.x);
+        circle.setAttribute('cy', node.y);
+        circle.setAttribute('r', 23);
+        circle.setAttribute('fill', pickNodeFill(node.id, node.color, { current, frontier, visited, pathNodes }));
+        circle.setAttribute('class', `node-circle${current === node.id ? ' current' : ''}${frontier.has(node.id) ? ' frontier' : ''}${visited.has(node.id) ? ' visited' : ''}${pathNodes.has(node.id) ? ' path' : ''}${state.selected.type === 'node' && state.selected.id === node.id ? ' selected' : ''}`);
+        if (node.id === state.graph.start) circle.setAttribute('stroke', '#22c55e');
+        if (node.id === state.graph.goal) circle.setAttribute('stroke', '#ef4444');
+        group.style.cursor = 'pointer';
+
+        circle.setAttribute('data-node-id', node.id);
+        group.appendChild(circle);
+
+        if (node.id === state.graph.start || node.id === state.graph.goal) {
+          const ring = document.createElementNS(svgNS, 'circle');
+          ring.setAttribute('cx', node.x);
+          ring.setAttribute('cy', node.y);
+          ring.setAttribute('r', 29);
+          ring.setAttribute('fill', 'none');
+          ring.setAttribute('stroke', node.id === state.graph.start ? '#22c55e' : '#ef4444');
+          ring.setAttribute('stroke-width', '2.2');
+          ring.setAttribute('stroke-dasharray', '4 5');
+          ring.setAttribute('pointer-events', 'none');
+          group.appendChild(ring);
+        }
+
+        const text = document.createElementNS(svgNS, 'text');
+        text.setAttribute('x', node.x);
+        text.setAttribute('y', node.y + 4);
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('class', 'svg-text');
+        text.setAttribute('fill', '#ffffff');
+        if (state.theme === 'light') text.setAttribute('fill', '#ffffff');
+        text.textContent = node.id;
+        const labelVisible = !state.incognito || visibleIncognitoLabels.has(node.id);
+        text.setAttribute('opacity', labelVisible ? '1' : '0');
+        group.appendChild(text);
+
+        if (node.id === state.graph.start || node.id === state.graph.goal) {
+          const tag = document.createElementNS(svgNS, 'text');
+          tag.setAttribute('x', node.x);
+          tag.setAttribute('y', node.y - 32);
+          tag.setAttribute('text-anchor', 'middle');
+          tag.setAttribute('class', 'svg-text edge-label');
+          tag.setAttribute('fill', node.id === state.graph.start ? '#22c55e' : '#ef4444');
+          tag.setAttribute('opacity', labelVisible ? '1' : '0');
+          tag.textContent = node.id === state.graph.start ? t('startShort') : t('goalShort');
+          group.appendChild(tag);
+        }
+
+        els.nodeLayer.appendChild(group);
+      }
+    }
+
+    function pickNodeFill(nodeId, baseColor, sets) {
+      if (sets.pathNodes.has(nodeId)) return '#22c55e';
+      if (nodeId === sets.current) return '#f87171';
+      if (sets.frontier.has(nodeId)) return '#38bdf8';
+      if (sets.visited.has(nodeId)) return '#facc15';
+      return baseColor;
+    }
+
+    function getIncognitoVisibleEdgeIds() {
+      if (!state.incognito) return state.graph.edges.map(e => e.id);
+      const result = [];
+      if (state.hoveredEdgeId) return [state.hoveredEdgeId];
+      if (state.hoveredNodeId) {
+        for (const edge of state.graph.edges) {
+          if (edge.from === state.hoveredNodeId || edge.to === state.hoveredNodeId) result.push(edge.id);
+        }
+      }
+      return result;
+    }
+
+    function getIncognitoVisibleLabelIds() {
+      if (!state.incognito) return state.graph.nodes.map(n => n.id);
+      const ids = new Set();
+      if (state.hoveredNodeId) {
+        ids.add(state.hoveredNodeId);
+        for (const edge of state.graph.edges) {
+          if (edge.from === state.hoveredNodeId || edge.to === state.hoveredNodeId) {
+            ids.add(edge.from);
+            ids.add(edge.to);
+          }
+        }
+      }
+      if (state.hoveredEdgeId) {
+        const edge = state.graph.edges.find(e => e.id === state.hoveredEdgeId);
+        if (edge) {
+          ids.add(edge.from);
+          ids.add(edge.to);
+        }
+      }
+      return Array.from(ids);
+    }
+
+    function pathToEdgeIds(path) {
+      const ids = [];
+      if (!path || path.length < 2) return ids;
+      for (let i = 0; i < path.length - 1; i++) {
+        const a = path[i];
+        const b = path[i + 1];
+        const edge = state.graph.edges.find(e => {
+          if (e.type === 'directed') return e.from === a && e.to === b;
+          return (e.from === a && e.to === b) || (e.from === b && e.to === a);
+        });
+        if (edge) ids.push(edge.id);
+      }
+      return ids;
+    }
+
+    function shortenLine(x1, y1, x2, y2, r1, r2) {
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const dist = Math.hypot(dx, dy) || 1;
+      const ux = dx / dist;
+      const uy = dy / dist;
+      const sx1 = x1 + ux * r1;
+      const sy1 = y1 + uy * r1;
+      const sx2 = x2 - ux * r2;
+      const sy2 = y2 - uy * r2;
+      return {
+        x1: sx1,
+        y1: sy1,
+        x2: sx2,
+        y2: sy2,
+        mx: (sx1 + sx2) / 2,
+        my: (sy1 + sy2) / 2
+      };
+    }
+
+    function handleNodeClick(nodeId) {
+      if (state.editMode && state.editorTool === 'delete') {
+        deleteNode(nodeId);
+        return;
+      }
+      if (state.editMode && state.editorTool === 'connect') {
+        if (!state.connectFrom) {
+          state.connectFrom = nodeId;
+          setSelection('node', nodeId);
+          setStatus(`${t('toolNameConnect')}: ${nodeId}`);
+          return;
+        }
+        if (state.connectFrom === nodeId) {
+          state.connectFrom = null;
+          setStatus(t('ready'));
+          return;
+        }
+        createEdge(state.connectFrom, nodeId);
+        state.connectFrom = null;
+        return;
+      }
+      setSelection('node', nodeId);
+    }
+
+    function renameNode(nodeId) {
+      if (!state.editMode) return;
+      const node = state.graph.nodes.find(n => n.id === nodeId);
+      if (!node) return;
+      const next = prompt(t('renamePrompt', { len: String(state.graph.config.nameLength) }), node.id);
+      if (next == null) return;
+      const cleaned = next.trim();
+      if (cleaned.length > state.graph.config.nameLength) {
+        setMessage(t('badNameLength', { len: String(state.graph.config.nameLength), id: cleaned || '∅' }), 'error');
+        return;
+      }
+      if (state.graph.nodes.some(n => n.id === cleaned && n.id !== nodeId)) {
+        setMessage(t('duplicateNode', { id: cleaned }), 'error');
+        return;
+      }
+      const oldId = node.id;
+      node.id = cleaned;
+      for (const edge of state.graph.edges) {
+        if (edge.from === oldId) edge.from = cleaned;
+        if (edge.to === oldId) edge.to = cleaned;
+      }
+      if (state.graph.start === oldId) state.graph.start = cleaned;
+      if (state.graph.goal === oldId) state.graph.goal = cleaned;
+      if (state.selected.type === 'node' && state.selected.id === oldId) state.selected.id = cleaned;
+      syncGraphConfigFromInputs();
+      renderGraph();
+      updateUiState();
+      updateSelectionStatus();
+      updateInspector();
+      setStatus(t('selectionNode', { id: cleaned }));
+    }
+
+    function getSvgPoint(event) {
+      const point = els.graphSvg.createSVGPoint();
+      point.x = event.clientX;
+      point.y = event.clientY;
+      const transformed = point.matrixTransform(els.graphSvg.getScreenCTM().inverse());
+      return { x: transformed.x, y: transformed.y };
+    }
+
+    function isEditableTarget(target) {
+      if (!target) return false;
+      const tag = (target.tagName || '').toUpperCase();
+      if (target.isContentEditable) return true;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || !!target.closest('[contenteditable="true"]');
+    }
+
+
+    function closestDataId(target, attr) {
+      if (!target || typeof target.closest !== 'function') return null;
+      const el = target.closest('[' + attr + ']');
+      return el ? el.getAttribute(attr) : null;
+    }
+
+    function getNodeIdFromTarget(target) {
+      return closestDataId(target, 'data-node-id');
+    }
+
+    function getEdgeIdFromTarget(target) {
+      return closestDataId(target, 'data-edge-id');
+    }
+
+    function createNode(x, y) {
+      if (!state.editMode) return;
+      syncGraphConfigFromInputs();
+      const id = generateNodeId();
+      if (!id) {
+        setMessage(t('badGeneratedId'), 'error');
+        return;
+      }
+      state.graph.nodes.push({
+        id,
+        x,
+        y,
+        color: els.editorNodeColor.value || state.graph.config.defaultNodeColor
+      });
+      setSelection('node', id);
+      resetDemoState();
+      renderGraph();
+      updateUiState();
+      setMessage(t('newNodeAdded', { id }), 'success');
+    }
+
+    function generateNodeId() {
+      const len = Number(els.nameLengthInput.value) || state.graph.config.nameLength;
+      const existing = new Set(state.graph.nodes.map(n => n.id));
+      const prefix = 'N';
+      for (let i = 1; i < 999999; i++) {
+        const numLen = Math.max(1, len - prefix.length);
+        const candidate = `${prefix}${String(i).padStart(numLen, '0')}`.slice(0, len);
+        if (candidate.length === len && !existing.has(candidate)) return candidate;
+      }
+      return null;
+    }
+
+    function createEdge(from, to) {
+      if (!state.editMode) return;
+      const weight = Number(els.editorWeight.value);
+      if (Number.isNaN(weight) || weight < 0) {
+        setMessage(t('invalidWeight'), 'error');
+        return;
+      }
+      const edge = {
+        id: `e${Date.now()}${Math.random().toString(36).slice(2, 7)}`,
+        from,
+        to,
+        type: els.editorEdgeType.value,
+        color: els.editorEdgeColor.value || state.graph.config.defaultEdgeColor,
+        weight
+      };
+      state.graph.edges.push(edge);
+      setSelection('edge', edge.id);
+      resetDemoState();
+      renderGraph();
+      updateUiState();
+      setMessage(t('edgeCreated', { from, sym: edgeTypeSymbol(edge.type), to }), 'success');
+    }
+
+    function deleteNode(nodeId) {
+      if (!state.editMode) return;
+      state.graph.nodes = state.graph.nodes.filter(n => n.id !== nodeId);
+      state.graph.edges = state.graph.edges.filter(e => e.from !== nodeId && e.to !== nodeId);
+      if (state.graph.start === nodeId) state.graph.start = null;
+      if (state.graph.goal === nodeId) state.graph.goal = null;
+      if (state.selected.id === nodeId) setSelection(null, null);
+      resetDemoState();
+      renderGraph();
+      updateUiState();
+      setMessage(t('deletedNode', { id: nodeId }), 'success');
+    }
+
+    function deleteEdge(edgeId) {
+      if (!state.editMode) return;
+      state.graph.edges = state.graph.edges.filter(e => e.id !== edgeId);
+      if (state.selected.id === edgeId) setSelection(null, null);
+      resetDemoState();
+      renderGraph();
+      updateUiState();
+      setMessage(t('deletedEdge'), 'success');
+    }
+
+    function updateInspector() {
+      if (!state.selected.type) {
+        els.inspectorContent.textContent = t('inspectorEmpty');
+        syncEditorPanelState();
+        return;
+      }
+
+      if (state.selected.type === 'node') {
+        const node = state.graph.nodes.find(n => n.id === state.selected.id);
+        if (!node) {
+          els.inspectorContent.textContent = t('inspectorEmpty');
+          syncEditorPanelState();
+          return;
+        }
+        els.inspectorContent.innerHTML = `
+          <div><strong>${t('inspectorNode', { id: node.id })}</strong></div>
+          <div class="grid-2" style="margin-top:10px;">
+            <div class="inline-input">
+              <label class="small">ID</label>
+              <input id="insNodeId" type="text" maxlength="${state.graph.config.nameLength}" value="${escapeHtml(node.id)}" />
+            </div>
+            <div class="inline-input">
+              <label class="small">${t('nodeColor')}</label>
+              <input id="insNodeColor" type="color" value="${node.color}" />
+            </div>
+            <div class="inline-input">
+              <label class="small">X</label>
+              <input id="insNodeX" type="number" value="${round(node.x)}" />
+            </div>
+            <div class="inline-input">
+              <label class="small">Y</label>
+              <input id="insNodeY" type="number" value="${round(node.y)}" />
+            </div>
+          </div>
+          <div class="button-row" style="margin-top:10px;">
+            <button id="applyNodePropsBtn">Apply</button>
+          </div>
+        `;
+        document.getElementById('applyNodePropsBtn')?.addEventListener('click', () => {
+          if (!state.editMode) return;
+          const nextId = document.getElementById('insNodeId').value.trim();
+          const nextColor = document.getElementById('insNodeColor').value;
+          const nextX = Number(document.getElementById('insNodeX').value);
+          const nextY = Number(document.getElementById('insNodeY').value);
+          if (nextId.length > state.graph.config.nameLength) {
+            setMessage(t('badNameLength', { len: String(state.graph.config.nameLength), id: nextId || '∅' }), 'error');
+            return;
+          }
+          if (state.graph.nodes.some(n => n.id === nextId && n.id !== node.id)) {
+            setMessage(t('duplicateNode', { id: nextId }), 'error');
+            return;
+          }
+          const oldId = node.id;
+          node.id = nextId;
+          node.color = nextColor;
+          node.x = nextX;
+          node.y = nextY;
+          for (const edge of state.graph.edges) {
+            if (edge.from === oldId) edge.from = nextId;
+            if (edge.to === oldId) edge.to = nextId;
+          }
+          if (state.graph.start === oldId) state.graph.start = nextId;
+          if (state.graph.goal === oldId) state.graph.goal = nextId;
+          state.selected.id = nextId;
+          resetDemoState();
+          renderGraph();
+          updateUiState();
+          updateSelectionStatus();
+          updateInspector();
+        });
+        syncEditorPanelState();
+        return;
+      }
+
+      const edge = state.graph.edges.find(e => e.id === state.selected.id);
+      if (!edge) {
+        els.inspectorContent.textContent = t('inspectorEmpty');
+        syncEditorPanelState();
+        return;
+      }
+      els.inspectorContent.innerHTML = `
+        <div><strong>${t('inspectorEdge', { from: edge.from, sym: edgeTypeSymbol(edge.type), to: edge.to })}</strong></div>
+        <div class="grid-2" style="margin-top:10px;">
+          <div class="inline-input">
+            <label class="small">${t('edgeColor')}</label>
+            <input id="insEdgeColor" type="color" value="${edge.color}" />
+          </div>
+          <div class="inline-input">
+            <label class="small">${t('weight')}</label>
+            <input id="insEdgeWeight" type="number" min="0" step="0.1" value="${edge.weight}" />
+          </div>
+          <div class="inline-input">
+            <label class="small">${t('edgeType')}</label>
+            <select id="insEdgeType">
+              <option value="undirected" ${edge.type === 'undirected' ? 'selected' : ''}>--</option>
+              <option value="directed" ${edge.type === 'directed' ? 'selected' : ''}>-></option>
+              <option value="bidirectional" ${edge.type === 'bidirectional' ? 'selected' : ''}>&lt;&gt;</option>
+            </select>
+          </div>
+        </div>
+        <div class="button-row" style="margin-top:10px;">
+          <button id="applyEdgePropsBtn">Apply</button>
+        </div>
+      `;
+      document.getElementById('applyEdgePropsBtn')?.addEventListener('click', () => {
+        if (!state.editMode) return;
+        const nextColor = document.getElementById('insEdgeColor').value;
+        const nextWeight = Number(document.getElementById('insEdgeWeight').value);
+        const nextType = document.getElementById('insEdgeType').value;
+        if (Number.isNaN(nextWeight) || nextWeight < 0) {
+          setMessage(t('invalidWeight'), 'error');
+          return;
+        }
+        edge.color = nextColor;
+        edge.weight = nextWeight;
+        edge.type = nextType;
+        resetDemoState();
+        renderGraph();
+      });
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function syncGraphConfigFromInputs() {
+      state.graph.config.defaultNodeColor = els.defaultNodeColor.value;
+      state.graph.config.defaultEdgeColor = els.defaultEdgeColor.value;
+      state.graph.config.nameLength = Math.max(1, Math.min(12, Number(els.nameLengthInput.value) || 5));
+    }
+
+    function getNeighbors(graph, nodeId) {
+      const neighbors = [];
+      for (const edge of graph.edges) {
+        if (edge.type === 'directed') {
+          if (edge.from === nodeId) neighbors.push({ id: edge.to, weight: edge.weight, edgeId: edge.id });
+        } else if (edge.type === 'bidirectional' || edge.type === 'undirected') {
+          if (edge.from === nodeId) neighbors.push({ id: edge.to, weight: edge.weight, edgeId: edge.id });
+          else if (edge.to === nodeId) neighbors.push({ id: edge.from, weight: edge.weight, edgeId: edge.id });
+        }
+      }
+      return neighbors;
+    }
+
+function buildBfsDepthMap(graph, startId) {
+  const depth = new Map();
+  if (!startId) return depth;
+
+  const queue = [startId];
+  depth.set(startId, 0);
+
+  while (queue.length) {
+    const current = queue.shift();
+    const currentDepth = depth.get(current);
+
+    for (const neighbor of getNeighbors(graph, current)) {
+      if (!depth.has(neighbor.id)) {
+        depth.set(neighbor.id, currentDepth + 1);
+        queue.push(neighbor.id);
+      }
+    }
+  }
+
+  return depth;
+}
+
+function validateBfsSequenceFlexible(graph, sequence) {
+  const L = (ka, en) => (state.lang === 'ka' ? ka : en);
+
+  if (!graph.start || !graph.goal) {
+    return { ok: false, message: t('demoNeedsStartGoal') };
+  }
+
+  const depthMap = buildBfsDepthMap(graph, graph.start);
+  const goalDepth = depthMap.get(graph.goal);
+
+  if (goalDepth == null) {
+    return { ok: false, message: t('noPath') };
+  }
+
+  if (!sequence.length) {
+    return { ok: false, message: t('validationEmpty') };
+  }
+
+  if (sequence[0] !== graph.start) {
+    return {
+      ok: false,
+      message: L(
+        `BFS მიმდევრობა უნდა იწყებოდეს საწყისი კვანძით: ${graph.start}`,
+        `A BFS sequence must start with the start node: ${graph.start}`
+      )
+    };
+  }
+
+  if (sequence[sequence.length - 1] !== graph.goal) {
+    return {
+      ok: false,
+      message: L(
+        `BFS მიმდევრობის ბოლო ელემენტი უნდა იყოს მიზანი: ${graph.goal}`,
+        `The last element of the BFS sequence must be the goal: ${graph.goal}`
+      )
+    };
+  }
+
+  const seen = new Set();
+  let previousDepth = -1;
+  const actualByDepth = new Map();
+
+  for (const id of sequence) {
+    if (!depthMap.has(id)) {
+      return {
+        ok: false,
+        message: L(
+          `კვანძი "${id}" არ არის მიღწევადი საწყისი კვანძიდან BFS-ის მიხედვით.`,
+          `Node "${id}" is not reachable from the start node according to BFS.`
+        )
+      };
+    }
+
+    if (seen.has(id)) {
+      return {
+        ok: false,
+        message: L(
+          `კვანძი "${id}" მეორდება, რაც BFS გაფართოების მიმდევრობაში დაუშვებელია.`,
+          `Node "${id}" is repeated, which is not allowed in a BFS expansion sequence.`
+        )
+      };
+    }
+
+    const d = depthMap.get(id);
+
+    if (d < previousDepth) {
+      return {
+        ok: false,
+        message: L(
+          `BFS-ში დონე არ უნდა შემცირდეს. კვანძი "${id}" უფრო ადრეულ დონეზე აღმოჩნდა.`,
+          `In BFS the level must not decrease. Node "${id}" appears on an earlier level.`
+        )
+      };
+    }
+
+    if (d > goalDepth) {
+      return {
+        ok: false,
+        message: L(
+          `კვანძი "${id}" მიზანზე უფრო ღრმა დონეზეა და მიზნის პოვნამდე არ უნდა გამოჩნდეს.`,
+          `Node "${id}" is deeper than the goal and should not appear before the goal is found.`
+        )
+      };
+    }
+
+    previousDepth = d;
+    seen.add(id);
+
+    if (!actualByDepth.has(d)) {
+      actualByDepth.set(d, []);
+    }
+    actualByDepth.get(d).push(id);
+  }
+
+  for (let d = 0; d < goalDepth; d++) {
+    const expectedLevel = [...depthMap.entries()]
+      .filter(([, depth]) => depth === d)
+      .map(([id]) => id);
+
+    const actualLevel = actualByDepth.get(d) || [];
+
+    if (actualLevel.length !== expectedLevel.length) {
+      return {
+        ok: false,
+        message: L(
+          `დონე ${d}-ზე ყველა კვანძი უნდა იყოს წარმოდგენილი. მიღებულია: ${actualLevel.join(', ') || '—'}. საჭიროა: ${expectedLevel.join(', ') || '—'}.`,
+          `All nodes at level ${d} must be present. Received: ${actualLevel.join(', ') || '—'}. Expected: ${expectedLevel.join(', ') || '—'}.`
+        )
+      };
+    }
+
+    const missing = expectedLevel.filter(id => !actualLevel.includes(id));
+    if (missing.length) {
+      return {
+        ok: false,
+        message: L(
+          `დონე ${d}-ზე აკლია კვანძები: ${missing.join(', ')}`,
+          `Missing nodes at level ${d}: ${missing.join(', ')}`
+        )
+      };
+    }
+  }
+
+  return {
+    ok: true,
+    message: L(
+      'მიმდევრობა სწორია. BFS-ისთვის ერთსა და იმავე დონეზე სხვადასხვა რიგიც მიიღება.',
+      'The sequence is correct. For BFS, different orders inside the same level are accepted.'
+    )
+  };
+}
+
+
+
+    function buildCanonicalSequence(steps) {
+      const sequence = [];
+      for (const step of steps || []) {
+        if (!step || step.current == null) continue;
+        if (sequence[sequence.length - 1] !== step.current) {
+          sequence.push(step.current);
+        }
+      }
+      return sequence;
+    }
+
+    function formatSequence(sequence) {
+      return (sequence && sequence.length) ? sequence.join(' → ') : t('none');
+    }
+
+    function updateStepLogOutput() {
+      if (!els.stepLogOutput) return;
+      if (!state.demo.prepared) {
+        els.stepLogOutput.value = t('stepLogIdle');
+        return;
+      }
+      const total = state.demo.steps.length;
+      const lines = [
+        t('stepLogHeader', {
+          algo: state.demo.algorithm.toUpperCase(),
+          start: state.graph.start || t('none'),
+          goal: state.graph.goal || t('none'),
+          sequence: formatSequence(state.demo.canonicalSequence)
+        }),
+        ''
+      ];
+      state.demo.steps.forEach((step, idx) => {
+        lines.push(t('stepLogStep', {
+          index: String(idx + 1),
+          total: String(total),
+          current: step.current ?? t('none'),
+          frontier: step.frontier.join(', ') || t('none'),
+          visited: step.visited.join(', ') || t('none')
+        }));
+      });
+      lines.push('');
+      if (state.demo.finalPath.length) {
+        lines.push(t('stepLogFinalPath', { path: state.demo.finalPath.join(' → ') }));
+      } else {
+        lines.push(t('stepLogNoPath'));
+      }
+      els.stepLogOutput.value = lines.join('\n');
+    }
+
+    function parseSequenceInput(text) {
+      return String(text || '')
+        .split(/\s*(?:->|→|,|;|\|)\s*|\s+/)
+        .map(token => token.trim())
+        .filter(Boolean);
+    }
+
+    function ensureDemoForCurrentAlgorithm() {
+      const algorithm = els.algorithmSelect.value;
+      if (!state.demo.prepared || state.demo.algorithm !== algorithm) {
+        const result = buildDemoSteps(algorithm);
+        state.demo.algorithm = algorithm;
+        state.demo.prepared = true;
+        state.demo.steps = result.steps;
+        state.demo.finalPath = result.path;
+        state.demo.index = -1;
+        state.demo.canonicalSequence = buildCanonicalSequence(result.steps);
+        stopAutoPlay(false);
+        updateStepLogOutput();
+        updateUiState();
+      }
+      return state.demo.canonicalSequence;
+    }
+
+    function fillExpectedSequence() {
+      try {
+        const sequence = ensureDemoForCurrentAlgorithm();
+        els.stepSequenceInput.value = formatSequence(sequence);
+        setValidationMessage(`${t('expectedSequenceLabel')}: ${formatSequence(sequence)}`, 'success');
+      } catch (error) {
+        setValidationMessage(`${t('parseErrorPrefix')} ${error.message}`, 'error');
+      }
+    }
+
+
+function validateSequence() {
+  try {
+    const actual = parseSequenceInput(els.stepSequenceInput.value);
+
+    if (!actual.length) {
+      setValidationMessage(t('validationEmpty'), 'error');
+      return;
+    }
+
+    const algorithm = els.algorithmSelect.value;
+
+    if (algorithm === 'bfs') {
+      const result = validateBfsSequenceFlexible(state.graph, actual);
+      setValidationMessage(
+        `${result.message}
+${t('yourSequenceLabel')}: ${formatSequence(actual)}`,
+        result.ok ? 'success' : 'error'
+      );
+      return;
+    }
+
+    const expected = ensureDemoForCurrentAlgorithm();
+
+    if (!expected.length) {
+      setValidationMessage(t('noExpectedSequence'), 'error');
+      return;
+    }
+
+    const mismatchIndex = actual.findIndex((token, index) => token !== expected[index]);
+
+    if (mismatchIndex !== -1) {
+      setValidationMessage(
+        `${t('validationWrong', {
+          index: String(mismatchIndex + 1),
+          actual: actual[mismatchIndex],
+          expected: expected[mismatchIndex] ?? t('none')
+        })}
+${t('yourSequenceLabel')}: ${formatSequence(actual)}
+${t('expectedSequenceLabel')}: ${formatSequence(expected)}`,
+        'error'
+      );
+      return;
+    }
+
+    if (actual.length !== expected.length) {
+      setValidationMessage(
+        `${t('validationLengthMismatch', {
+          actualCount: String(actual.length),
+          expectedCount: String(expected.length)
+        })}
+${t('yourSequenceLabel')}: ${formatSequence(actual)}
+${t('expectedSequenceLabel')}: ${formatSequence(expected)}`,
+        'error'
+      );
+      return;
+    }
+
+    setValidationMessage(
+      `${t('validationCorrect')}
+${t('expectedSequenceLabel')}: ${formatSequence(expected)}`,
+      'success'
+    );
+  } catch (error) {
+    setValidationMessage(`${t('parseErrorPrefix')} ${error.message}`, 'error');
+  }
+}
+
+    async function copyStepLog() {
+      const text = els.stepLogOutput?.value || '';
+      if (!text) return;
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch (error) {
+        els.stepLogOutput.focus();
+        els.stepLogOutput.select();
+        document.execCommand('copy');
+      }
+      setMessage(t('copyStepsSuccess'), 'success');
+    }
+
+    function buildDemoSteps(algorithm) {
+      const graph = state.graph;
+      if (!graph.start || !graph.goal) throw new Error(t('demoNeedsStartGoal'));
+      const nodeIds = new Set(graph.nodes.map(n => n.id));
+      if (!nodeIds.has(graph.start) || !nodeIds.has(graph.goal)) throw new Error(t('demoNeedsStartGoal'));
+
+      if (algorithm === 'bfs') return bfsSteps(graph);
+      if (algorithm === 'dfs') return dfsSteps(graph);
+      return astarSteps(graph);
+    }
+
+    function bfsSteps(graph) {
+      const steps = [];
+      const queue = [graph.start];
+      const visited = new Set([graph.start]);
+      const parent = new Map([[graph.start, null]]);
+      let found = false;
+
+      while (queue.length) {
+        const current = queue.shift();
+        const frontier = [...queue];
+        const path = reconstructPath(parent, current);
+        steps.push({ current, frontier, visited: [...visited], path: current === graph.goal ? path : [] });
+        if (current === graph.goal) { found = true; break; }
+        for (const neighbor of getNeighbors(graph, current)) {
+          if (!visited.has(neighbor.id)) {
+            visited.add(neighbor.id);
+            parent.set(neighbor.id, current);
+            queue.push(neighbor.id);
+            steps.push({ current, frontier: [...queue], visited: [...visited], path: [] });
+          }
+        }
+      }
+      return finalizeSteps(steps, found ? reconstructPath(parent, graph.goal) : []);
+    }
+
+    function dfsSteps(graph) {
+      const steps = [];
+      const stack = [graph.start];
+      const visited = new Set();
+      const parent = new Map([[graph.start, null]]);
+      let found = false;
+
+      while (stack.length) {
+        const current = stack.pop();
+        if (visited.has(current)) continue;
+        visited.add(current);
+        const path = reconstructPath(parent, current);
+        steps.push({ current, frontier: [...stack], visited: [...visited], path: current === graph.goal ? path : [] });
+        if (current === graph.goal) { found = true; break; }
+        const neighbors = getNeighbors(graph, current);
+        for (let i = neighbors.length - 1; i >= 0; i--) {
+          const neighbor = neighbors[i];
+          if (!visited.has(neighbor.id) && !stack.includes(neighbor.id)) {
+            if (!parent.has(neighbor.id)) parent.set(neighbor.id, current);
+            stack.push(neighbor.id);
+            steps.push({ current, frontier: [...stack], visited: [...visited], path: [] });
+          }
+        }
+      }
+      return finalizeSteps(steps, found ? reconstructPath(parent, graph.goal) : []);
+    }
+
+    function astarSteps(graph) {
+      const steps = [];
+      const nodeMap = new Map(graph.nodes.map(n => [n.id, n]));
+      const open = [{ id: graph.start, f: heuristic(graph.start), g: 0 }];
+      const openMap = new Map([[graph.start, { f: heuristic(graph.start), g: 0 }]]);
+      const closed = new Set();
+      const parent = new Map([[graph.start, null]]);
+      const gScore = new Map([[graph.start, 0]]);
+      let found = false;
+
+      while (open.length) {
+        open.sort((a, b) => a.f - b.f || a.g - b.g || a.id.localeCompare(b.id));
+        const currentEntry = open.shift();
+        openMap.delete(currentEntry.id);
+        const current = currentEntry.id;
+        if (closed.has(current)) continue;
+        closed.add(current);
+        const path = reconstructPath(parent, current);
+        steps.push({ current, frontier: open.map(x => x.id), visited: [...closed], path: current === graph.goal ? path : [] });
+        if (current === graph.goal) { found = true; break; }
+
+        for (const neighbor of getNeighbors(graph, current)) {
+          if (closed.has(neighbor.id)) continue;
+          const tentativeG = (gScore.get(current) ?? Infinity) + neighbor.weight;
+          if (tentativeG < (gScore.get(neighbor.id) ?? Infinity)) {
+            parent.set(neighbor.id, current);
+            gScore.set(neighbor.id, tentativeG);
+            const entry = { id: neighbor.id, g: tentativeG, f: tentativeG + heuristic(neighbor.id) };
+            open.push(entry);
+            openMap.set(neighbor.id, entry);
+            steps.push({ current, frontier: open.map(x => x.id), visited: [...closed], path: [] });
+          }
+        }
+      }
+
+      function heuristic(nodeId) {
+        const a = nodeMap.get(nodeId);
+        const b = nodeMap.get(graph.goal);
+        if (!a || !b) return 0;
+        return Math.hypot(a.x - b.x, a.y - b.y) / 100;
+      }
+
+      return finalizeSteps(steps, found ? reconstructPath(parent, graph.goal) : []);
+    }
+
+    function finalizeSteps(steps, path) {
+      if (steps.length === 0) {
+        steps.push({ current: null, frontier: [], visited: [], path: [] });
+      }
+      if (path.length) {
+        const last = steps[steps.length - 1];
+        steps[steps.length - 1] = { ...last, path };
+      }
+      return { steps, path };
+    }
+
+    function reconstructPath(parent, nodeId) {
+      const path = [];
+      let current = nodeId;
+      while (current != null) {
+        path.push(current);
+        current = parent.get(current) ?? null;
+      }
+      return path.reverse();
+    }
+
+    function prepareDemo() {
+      try {
+        const algorithm = els.algorithmSelect.value;
+        const result = buildDemoSteps(algorithm);
+        state.demo.algorithm = algorithm;
+        state.demo.prepared = true;
+        state.demo.steps = result.steps;
+        state.demo.finalPath = result.path;
+        state.demo.index = -1;
+        state.demo.canonicalSequence = buildCanonicalSequence(result.steps);
+        stopAutoPlay(false);
+        updateStepLogOutput();
+        updateUiState();
+        renderGraph();
+        if (result.path.length) {
+          setMessage(t('demoPrepared', { algo: algorithm.toUpperCase(), count: String(result.steps.length) }), 'success');
+        } else {
+          setMessage(`${t('demoPrepared', { algo: algorithm.toUpperCase(), count: String(result.steps.length) })}
+${t('noPath')}`, 'success');
+        }
+        setValidationMessage(`${t('expectedSequenceLabel')}: ${formatSequence(state.demo.canonicalSequence)}`);
+      } catch (error) {
+        setMessage(`${t('parseErrorPrefix')} ${error.message}`, 'error');
+      }
+    }
+
+    function nextDemoStep() {
+      if (!state.demo.prepared) {
+        setMessage(t('demoNotReady'), 'error');
+        return;
+      }
+      if (state.demo.index >= state.demo.steps.length - 1) {
+        stopAutoPlay(false);
+        setMessage(state.demo.finalPath.length ? t('pathFound', { path: state.demo.finalPath.join(' → ') }) : t('noPath'), state.demo.finalPath.length ? 'success' : 'error');
+        setStatus(t('demoFinished'));
+        return;
+      }
+      state.demo.index += 1;
+      const step = state.demo.steps[state.demo.index];
+      renderGraph();
+      updateDemoInfo(step);
+      if (state.demo.index >= state.demo.steps.length - 1) {
+        stopAutoPlay(false);
+      }
+    }
+
+    function updateDemoInfo(step) {
+      const total = state.demo.steps.length;
+      const index = state.demo.index + 1;
+      if (step.path?.length) {
+        els.algoInfo.textContent = t('demoSolvedInfo', {
+          index: String(index),
+          total: String(total),
+          path: step.path.join(' → ')
+        });
+      } else {
+        els.algoInfo.textContent = t('demoStepInfo', {
+          index: String(index),
+          total: String(total),
+          current: step.current ?? t('none'),
+          frontier: step.frontier.join(', ') || t('none'),
+          visited: step.visited.join(', ') || t('none')
+        });
+      }
+      updateUiState();
+    }
+
+    function getCurrentDemoStep() {
+      if (!state.demo.prepared || state.demo.index < 0 || state.demo.index >= state.demo.steps.length) return null;
+      return state.demo.steps[state.demo.index];
+    }
+
+    function resetDemoState() {
+      stopAutoPlay(false);
+      state.demo.prepared = false;
+      state.demo.steps = [];
+      state.demo.index = -1;
+      state.demo.finalPath = [];
+      state.demo.canonicalSequence = [];
+      els.algoInfo.textContent = t('idleAlgoText');
+      updateStepLogOutput();
+      setValidationMessage('');
+      updateUiState();
+    }
+
+    function stopAutoPlay(showMessage = true) {
+      if (state.demo.timer) {
+        clearInterval(state.demo.timer);
+        state.demo.timer = null;
+        if (showMessage) setMessage(t('autoStopped'), 'success');
+      }
+      updateUiState();
+    }
+
+    function toggleAutoPlay() {
+      if (!state.demo.prepared) {
+        setMessage(t('demoNotReady'), 'error');
+        return;
+      }
+      if (state.demo.timer) {
+        stopAutoPlay(true);
+        return;
+      }
+      state.demo.timer = setInterval(() => {
+        const before = state.demo.index;
+        nextDemoStep();
+        if (state.demo.index === before || state.demo.index >= state.demo.steps.length - 1) {
+          stopAutoPlay(false);
+        }
+      }, 850);
+      updateUiState();
+    }
+
+    function toggleTheme() {
+      state.theme = state.theme === 'dark' ? 'light' : 'dark';
+      els.html.setAttribute('data-theme', state.theme);
+      renderGraph();
+      updateUiState();
+    }
+
+    function toggleEditMode() {
+      state.editMode = !state.editMode;
+      state.connectFrom = null;
+      state.draggingNodeId = null;
+      state.dragMoved = false;
+      state.justDragged = false;
+      updateUiState();
+      setMessage(state.editMode ? t('editModeEnabled') : t('editModeDisabled'), 'success');
+      setStatus(state.editMode ? t('editModeEnabled') : t('editModeDisabled'));
+    }
+
+    function toggleIncognito() {
+      state.incognito = !state.incognito;
+      state.hoveredEdgeId = null;
+      state.hoveredNodeId = null;
+      renderGraph();
+      updateUiState();
+      setMessage(state.incognito ? t('incognitoOn') : t('incognitoOff'), 'success');
+    }
+
+    function setTool(tool) {
+      state.editorTool = tool;
+      state.connectFrom = null;
+      updateUiState();
+      const map = {
+        'select': t('toolNameSelect'),
+        'add-node': t('toolNameAdd'),
+        'connect': t('toolNameConnect'),
+        'delete': t('toolNameDelete')
+      };
+      setStatus(t('toolSet', { tool: map[tool] }));
+    }
+
+
+    function handleSvgPointerDown(event) {
+      if (event.button !== 0) return;
+      const nodeId = getNodeIdFromTarget(event.target);
+      const edgeId = getEdgeIdFromTarget(event.target);
+
+      if (nodeId) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (state.editMode && state.editorTool === 'select') {
+          const node = state.graph.nodes.find(n => n.id === nodeId);
+          if (!node) return;
+          setSelection('node', nodeId);
+          const point = getSvgPoint(event);
+          state.draggingNodeId = nodeId;
+          state.dragOffset = { x: point.x - node.x, y: point.y - node.y };
+          state.dragMoved = false;
+        }
+        return;
+      }
+
+      if (edgeId) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (state.editMode && state.editorTool === 'select') {
+          setSelection('edge', edgeId);
+        }
+      }
+    }
+
+    function handleSvgClick(event) {
+      if (state.justDragged) {
+        state.justDragged = false;
+        return;
+      }
+
+      const nodeId = getNodeIdFromTarget(event.target);
+      const edgeId = getEdgeIdFromTarget(event.target);
+
+      if (nodeId) {
+        event.stopPropagation();
+        handleNodeClick(nodeId);
+        return;
+      }
+
+      if (edgeId) {
+        event.stopPropagation();
+        if (state.editMode && state.editorTool === 'delete') {
+          deleteEdge(edgeId);
+        } else {
+          setSelection('edge', edgeId);
+        }
+        return;
+      }
+
+      setSelection(null, null);
+      if (!state.editMode) return;
+      if (state.editorTool === 'add-node') {
+        const p = getSvgPoint(event);
+        createNode(p.x, p.y);
+      }
+    }
+
+    function handleSvgDoubleClick(event) {
+      const nodeId = getNodeIdFromTarget(event.target);
+      if (!nodeId) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (!state.editMode) return;
+      renameNode(nodeId);
+    }
+
+    function handleSvgPointerMove(event) {
+      if (!state.editMode || !state.draggingNodeId) return;
+      const node = state.graph.nodes.find(n => n.id === state.draggingNodeId);
+      if (!node) return;
+      const p = getSvgPoint(event);
+      const nextX = p.x - state.dragOffset.x;
+      const nextY = p.y - state.dragOffset.y;
+      if (Math.abs(nextX - node.x) > 0.5 || Math.abs(nextY - node.y) > 0.5) {
+        state.dragMoved = true;
+      }
+      node.x = nextX;
+      node.y = nextY;
+      renderGraph();
+      updateInspector();
+    }
+
+    function handleSvgPointerUp() {
+      state.justDragged = !!state.dragMoved;
+      state.draggingNodeId = null;
+      state.dragMoved = false;
+    }
+
+    function handleSvgPointerOver(event) {
+      let changed = false;
+      const nodeId = getNodeIdFromTarget(event.target);
+      const edgeId = getEdgeIdFromTarget(event.target);
+      if (nodeId && state.hoveredNodeId !== nodeId) {
+        state.hoveredNodeId = nodeId;
+        changed = true;
+      }
+      if (edgeId && state.hoveredEdgeId !== edgeId) {
+        state.hoveredEdgeId = edgeId;
+        changed = true;
+      }
+      if (changed && state.incognito) renderGraph();
+    }
+
+    function handleSvgPointerOut(event) {
+      let changed = false;
+      const fromNode = getNodeIdFromTarget(event.target);
+      const toNode = getNodeIdFromTarget(event.relatedTarget);
+      const fromEdge = getEdgeIdFromTarget(event.target);
+      const toEdge = getEdgeIdFromTarget(event.relatedTarget);
+
+      if (fromNode && fromNode !== toNode && state.hoveredNodeId === fromNode) {
+        state.hoveredNodeId = null;
+        changed = true;
+      }
+      if (fromEdge && fromEdge !== toEdge && state.hoveredEdgeId === fromEdge) {
+        state.hoveredEdgeId = null;
+        changed = true;
+      }
+      if (changed && state.incognito) renderGraph();
+    }
+
+    function setStartFromSelection() {
+      if (!state.editMode) return;
+      if (state.selected.type !== 'node') {
+        setMessage(t('needSelectedNode'), 'error');
+        return;
+      }
+      state.graph.start = state.selected.id;
+      resetDemoState();
+      renderGraph();
+      updateUiState();
+      setMessage(t('setStartMsg', { id: state.selected.id }), 'success');
+    }
+
+    function setGoalFromSelection() {
+      if (!state.editMode) return;
+      if (state.selected.type !== 'node') {
+        setMessage(t('needSelectedNode'), 'error');
+        return;
+      }
+      state.graph.goal = state.selected.id;
+      resetDemoState();
+      renderGraph();
+      updateUiState();
+      setMessage(t('setGoalMsg', { id: state.selected.id }), 'success');
+    }
+
+    function clearStartGoal() {
+      if (!state.editMode) return;
+      state.graph.start = null;
+      state.graph.goal = null;
+      resetDemoState();
+      renderGraph();
+      updateUiState();
+      setMessage(t('clearedStartGoalMsg'), 'success');
+    }
+
+    function drawFromText() {
+      try {
+        graphText = els.graphInput.value;
+        const graph = parseGraphText(graphText);
+        applyGraph(graph);
+        setMessage(t('messageParseSuccess'), 'success');
+      } catch (error) {
+        setMessage(`${t('parseErrorPrefix')} ${error.message}`, 'error');
+      }
+    }
+
+    function loadSample() {
+      graphText = sampleGraphText;
+      els.graphInput.value = graphText;
+      setMessage(t('messageSampleLoaded'), 'success');
+    }
+
+    function exportCurrentGraph() {
+      const text = graphToText(state.graph);
+      els.graphInput.value = text;
+      graphText = text;
+      setMessage(t('messageExported'), 'success');
+    }
+
+    function applyStartupIncognitoOnlyMode() {
+      if (!state.incognitoOnly) return;
+      state.incognito = true;
+      state.editMode = false;
+      document.body.classList.add('incognito-only');
+      setMessage(t('incognitoOnlyEnabled'), 'success');
+    }
+
+    function initialize() {
+      if (els.editorPanel.parentElement !== els.mainPanel) {
+        els.mainPanel.insertBefore(els.editorPanel, els.canvasWrap);
+      }
+      els.graphInput.value = graphText;
+      els.html.setAttribute('data-theme', state.theme);
+      applyStartupIncognitoOnlyMode();
+      setMessage(t('messageSampleLoaded'), 'success');
+      updateUiText();
+      drawFromText();
+      updateStepLogOutput();
+    }
+
+    els.drawBtn.addEventListener('click', drawFromText);
+    els.loadSampleBtn.addEventListener('click', loadSample);
+    els.exportTextBtn.addEventListener('click', exportCurrentGraph);
+    els.themeBtn.addEventListener('click', toggleTheme);
+    els.editModeBtn.addEventListener('click', toggleEditMode);
+    els.incognitoBtn.addEventListener('click', toggleIncognito);
+    els.prepareDemoBtn.addEventListener('click', prepareDemo);
+    els.nextStepBtn.addEventListener('click', nextDemoStep);
+    els.playDemoBtn.addEventListener('click', toggleAutoPlay);
+    els.resetDemoBtn.addEventListener('click', resetDemoState);
+    els.copyStepLogBtn.addEventListener('click', copyStepLog);
+    els.validateSequenceBtn.addEventListener('click', validateSequence);
+    els.fillExpectedSequenceBtn.addEventListener('click', fillExpectedSequence);
+    els.toolSelectBtn.addEventListener('click', () => setTool('select'));
+    els.toolAddNodeBtn.addEventListener('click', () => setTool('add-node'));
+    els.toolConnectBtn.addEventListener('click', () => setTool('connect'));
+    els.toolDeleteBtn.addEventListener('click', () => setTool('delete'));
+    els.setStartBtn.addEventListener('click', setStartFromSelection);
+    els.setGoalBtn.addEventListener('click', setGoalFromSelection);
+    els.clearStartGoalBtn.addEventListener('click', clearStartGoal);
+    els.syncTextBtn.addEventListener('click', exportCurrentGraph);
+    els.langKaBtn.addEventListener('click', () => { state.lang = 'ka'; updateUiText(); renderGraph(); });
+    els.langEnBtn.addEventListener('click', () => { state.lang = 'en'; updateUiText(); renderGraph(); });
+
+    els.defaultNodeColor.addEventListener('input', () => {
+      state.graph.config.defaultNodeColor = els.defaultNodeColor.value;
+      if (state.selected.type === 'node') {
+        const node = state.graph.nodes.find(n => n.id === state.selected.id);
+        if (node) node.color = els.defaultNodeColor.value;
+      }
+      renderGraph();
+    });
+
+    els.defaultEdgeColor.addEventListener('input', () => {
+      state.graph.config.defaultEdgeColor = els.defaultEdgeColor.value;
+      if (state.selected.type === 'edge') {
+        const edge = state.graph.edges.find(e => e.id === state.selected.id);
+        if (edge) edge.color = els.defaultEdgeColor.value;
+      }
+      renderGraph();
+    });
+
+    els.nameLengthInput.addEventListener('change', () => {
+      const next = Math.max(1, Math.min(12, Number(els.nameLengthInput.value) || 5));
+      state.graph.config.nameLength = next;
+      els.nameLengthInput.value = String(next);
+      updateInspector();
+    });
+
+    els.graphSvg.addEventListener('pointerdown', handleSvgPointerDown);
+    els.graphSvg.addEventListener('click', handleSvgClick);
+    els.graphSvg.addEventListener('dblclick', handleSvgDoubleClick);
+    els.graphSvg.addEventListener('pointerover', handleSvgPointerOver);
+    els.graphSvg.addEventListener('pointerout', handleSvgPointerOut);
+    window.addEventListener('pointermove', handleSvgPointerMove);
+    window.addEventListener('pointerup', handleSvgPointerUp);
+    els.graphSvg.addEventListener('pointerleave', handleSvgPointerUp);
+
+    window.addEventListener('keydown', event => {
+      if (isEditableTarget(document.activeElement) || isEditableTarget(event.target)) return;
+      if ((event.key === 'Delete' || event.key === 'Backspace') && state.editMode && state.selected.type) {
+        event.preventDefault();
+        if (state.selected.type === 'node') deleteNode(state.selected.id);
+        else deleteEdge(state.selected.id);
+      }
+    });
+
+    initialize();
+  </script>
+</body>
+</html>

@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Interactive Plot</title>
+    <style>
+        .language-switch {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .language-switch:hover {
+            background-color: #e0e0e0;
+        }
+        .admin-panel {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+            display: none;
+        }
+        .btn {
+            padding: 5px 10px;
+            margin-right: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+            background-color: #f0f0f0;
+        }
+        .btn:hover {
+            background-color: #e0e0e0;
+        }
+        .btn-active {
+            background-color: #d0d0d0;
+        }
+        #polygon-coords {
+            margin-top: 10px;
+            width: 100%;
+            height: 60px;
+            font-family: monospace;
+        }
+    </style>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+            tex2jax: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            }
+        });
+    </script>	
+    <script>
+        var adminMode = true;
+        var currentLanguage = "ka"; // Default language: ka for Georgian, en for English
+        var drawingMode = false;
+        var currentPolygon = [];
+        
+        xMax = 1.5
+        yMax = 1.5
+        
+        var shapes = [
+            [[0.2, -0.2], [0.6, -0.2], [0.6, 0.0], [0.2, 0.0], [0.2, -0.2]],
+            [[0.6, 0.6], [0.8, 0.9], [0.7, 1.2], [0.6, 0.6]],
+            [[-0.9, -0.8], [-0.6, -0.5], [-0.4, -0.9], [-0.9, -0.8]],
+            [[-0.4, 0.1], [-0.14, 0.11], [-0.23, 0.9], [-0.58, 0.8], [-0.8, 0.8], [-0.5, 0.2]],
+			[[0.57, 0.4],[0.73, 0.54],[1.01, 0.41],[0.7, 0.11]],
+			[[0.97, 1.17],[1.18, 0.99],[1.43, 1.3],[0.99, 1.36]],
+			[[0.82, 0.51],[1.02, 0.71],[1.19, 0.4]]
+        ];
+
+        function drawPlot() {
+            var canvas = document.getElementById("plotCanvas");
+            var ctx = canvas.getContext("2d");
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (adminMode) {
+                drawFigureInside(ctx, canvas);
+                drawCurves(ctx, canvas);
+                
+                // Show admin panel
+                document.getElementById("admin-panel").style.display = "block";
+            } else {
+                document.getElementById("admin-panel").style.display = "none";
+            }
+            
+            drawGridAndAxes(ctx, canvas);
+            drawShapes(ctx, canvas);
+            drawVertexCircles(ctx, canvas);
+            
+            // Draw the current polygon being created
+            if (drawingMode && currentPolygon.length > 0) {
+                drawCurrentPolygon(ctx, canvas);
+            }
+        }
+
+        // ეს არის განსაზღვრის არე, რომელზეც დაიხაზება პირველი ფუნქცია
+        f1Min = -1.2
+        f1Max = 1.2
+
+        // ეს არის პირველი ფუნქცია
+        function f1(x) {
+            return 1 * x;
+        }
+        
+        // ეს არის განსაზღვრის არე, რომელზეც დაიხაზება მეორე ფუნქცია
+        f2Min = -1.2
+        f2Max = 1.2
+
+        // ეს არის მეორე ფუნქცია
+        function f2(x) {
+            return 1 * (x ** 3);
+        }
+
+        
+        // ეს ორი ფუნქცია მათემატიკურ კოორდინატებს გარდაქმნის დასახატ კოორდინატებში
+        function xToCanvas(x, canvas) {
+            return canvas.width * (x + xMax) / (2 * xMax);
+        }
+        
+        function yToCanvas(y, canvas) {
+            return canvas.height * (yMax - y) / (2* yMax);
+        }
+
+        // ეს არის არე, სადაც გაფერადდება ფუნქციათაშორისი სივრცე. 
+        // არე ავტომატურად არ გამოითვლება!
+        fillStart = -1
+        fillEnd = 1
+
+        function drawFigureInside(ctx, canvas) {
+            // Fill area between y = f1(x) and y = f2(x)
+            ctx.fillStyle = "rgba(128, 128, 128, 0.5)";
+            ctx.beginPath();
+            
+            // Boundaries for x
+            const fillStart = -1;
+            const fillEnd = 1;
+            
+            // Draw upper curve (f1) from left to right
+            for (let x = fillStart; x <= fillEnd; x += 0.01) {
+                let y = f1(x);
+                let px = xToCanvas(x, canvas);
+                let py = yToCanvas(y, canvas);
+                
+                if (x === fillStart) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            
+            // Draw lower curve (f2) from right to left
+            for (let x = fillEnd; x >= fillStart; x -= 0.01) {
+                let y = f2(x);
+                let px = xToCanvas(x, canvas);
+                let py = yToCanvas(y, canvas);
+                ctx.lineTo(px, py);
+            }
+            
+            ctx.closePath();
+            ctx.fill();
+        }
+
+
+        function drawGridAndAxes(ctx, canvas) {
+            // Draw grid
+            ctx.strokeStyle = "#222";
+            ctx.lineWidth = 1;
+            
+            // Add coordinate values
+            ctx.fillStyle = "black";
+            ctx.font = "12px Arial";
+            ctx.textAlign = "center";
+            
+            // Horizontal grid lines with y-axis labels
+            for (let j = 0; j <= canvas.height; j += canvas.height / 10) {
+                ctx.beginPath();
+                ctx.moveTo(0, j);
+                ctx.lineTo(canvas.width, j);
+                ctx.stroke();
+                
+                // Add y-axis labels (convert from pixel coordinates to math coordinates)
+                let yValue = (yMax - j / canvas.height * (yMax *2)).toFixed(1);
+                ctx.fillText(yValue, canvas.width / 2 + 15, j + 4);
+            }
+            
+            // Vertical grid lines with x-axis labels
+            for (let i = 0; i <= canvas.width; i += canvas.width / 10) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, canvas.height);
+                ctx.stroke();
+                
+                // Add x-axis labels (convert from pixel coordinates to math coordinates)
+                let xValue = (i / canvas.width * (2* xMax) - xMax).toFixed(1);
+                ctx.fillText(xValue, i, canvas.height / 2 + 15);
+            }
+            
+            // Draw axes
+            ctx.strokeStyle = "black";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.moveTo(0, canvas.height / 2);
+            ctx.lineTo(canvas.width, canvas.height / 2);
+            ctx.stroke();
+        }
+
+        function drawCurves(ctx, canvas) {
+            // Draw y = x and y = x^3 curves
+            ctx.strokeStyle = "blue";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let x = f1Min; x <= f1Max; x += 0.01) {
+                let y = f1(x);
+                let px = xToCanvas(x, canvas);
+                let py = yToCanvas(y, canvas);
+                if (x === f1Min) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+            
+            ctx.strokeStyle = "red";
+            ctx.beginPath();
+            for (let x = f2Min; x <= f2Max; x += 0.01) {
+                let y = f2(x);
+                let px = xToCanvas(x, canvas);
+                let py = yToCanvas(y, canvas);
+                if (x === f2Min) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+        }
+
+        function drawShapes(ctx, canvas) {
+            // Draw shapes with different colors
+            var colors = ["rgba(0, 128, 0, 0.6)", "rgba(128, 0, 128, 0.6)", "rgba(255, 165, 0, 0.6)", "rgba(255, 192, 203, 0.6)", "rgba(0, 255, 255, 0.6)"];
+            for (let i = 0; i < shapes.length; i++) {
+                ctx.strokeStyle = "black";
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.beginPath();
+                for (let j = 0; j < shapes[i].length; j++) {
+                    let px = xToCanvas(shapes[i][j][0], canvas);
+                    let py = yToCanvas(shapes[i][j][1], canvas);
+                    if (j === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+            }
+        }
+        
+        function drawVertexCircles(ctx, canvas) {
+            // Draw circles at each vertex
+            ctx.strokeStyle = "black";
+            ctx.fillStyle = "white";
+            
+            for (let i = 0; i < shapes.length; i++) {
+                for (let j = 0; j < shapes[i].length; j++) {
+                    let px = xToCanvas(shapes[i][j][0], canvas);
+                    let py = yToCanvas(shapes[i][j][1], canvas);
+                    ctx.beginPath();
+                    ctx.arc(px, py, 4, 0, 2 * Math.PI);
+                    ctx.fill();
+                    ctx.stroke();
+                }
+            }
+        }
+
+        function showCoords(event) {
+            var canvas = event.target;
+            var rect = canvas.getBoundingClientRect();
+            var x = event.clientX - rect.left;
+            var y = event.clientY - rect.top;
+            var coordText = "X: " + (x / canvas.width * (2 * xMax) - xMax).toFixed(2) + 
+                " Y: " + (yMax - y / canvas.height * (2* yMax) ).toFixed(2);
+            document.getElementById("coords").innerText = coordText;
+            checkVertex(x, y, canvas.width, canvas.height);
+        }
+        
+        // Function to add vertex when clicking on canvas in drawing mode
+        function canvasClick(event) {
+            console.log("Canvas clicked!");
+            
+            // Update debug info
+            updateDebugInfo("Canvas clicked: drawingMode = " + drawingMode);
+            
+            if (!drawingMode) {
+                console.log("Not in drawing mode, ignoring click");
+                return;
+            }
+            
+            console.log("In drawing mode, adding vertex");
+            var canvas = event.target;
+            var rect = canvas.getBoundingClientRect();
+            var x = event.clientX - rect.left;
+            var y = event.clientY - rect.top;
+            
+            // Convert from canvas coordinates to math coordinates
+            var mathX = (x / canvas.width * (2 * xMax) - xMax).toFixed(2);
+            var mathY = (yMax - y / canvas.height * (2 * yMax)).toFixed(2);
+            
+            console.log("Adding point at: " + mathX + ", " + mathY);
+            
+            // Add the point to the current polygon
+            currentPolygon.push([parseFloat(mathX), parseFloat(mathY)]);
+            
+            // Update debug info
+            updateDebugInfo("Added point: [" + mathX + ", " + mathY + "], Total points: " + currentPolygon.length);
+            
+            // Update the polygon coordinates display
+            updatePolygonCoords();
+            
+            // Redraw the canvas
+            drawPlot();
+        }
+        
+        // Helper function to update debug info
+        function updateDebugInfo(message) {
+            var debugElement = document.getElementById("debug-info");
+            if (debugElement) {
+                var timestamp = new Date().toLocaleTimeString();
+                debugElement.innerHTML = timestamp + ": " + message + "<br>" + debugElement.innerHTML;
+                
+                // Keep only the last 5 messages
+                var lines = debugElement.innerHTML.split("<br>");
+                if (lines.length > 5) {
+                    debugElement.innerHTML = lines.slice(0, 5).join("<br>");
+                }
+            }
+        }
+        
+        // Function to draw the current polygon being created
+        function drawCurrentPolygon(ctx, canvas) {
+            if (currentPolygon.length === 0) return;
+            
+            ctx.strokeStyle = "blue";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            // Start from the first point
+            let px = xToCanvas(currentPolygon[0][0], canvas);
+            let py = yToCanvas(currentPolygon[0][1], canvas);
+            ctx.moveTo(px, py);
+            
+            // Draw lines to each subsequent point
+            for (let i = 1; i < currentPolygon.length; i++) {
+                px = xToCanvas(currentPolygon[i][0], canvas);
+                py = yToCanvas(currentPolygon[i][1], canvas);
+                ctx.lineTo(px, py);
+            }
+            
+            // If we have at least 3 points, close the polygon
+            if (currentPolygon.length >= 3) {
+                ctx.lineTo(xToCanvas(currentPolygon[0][0], canvas), yToCanvas(currentPolygon[0][1], canvas));
+            }
+            
+            ctx.stroke();
+            
+            // Draw vertices of the current polygon
+            ctx.fillStyle = "blue";
+            for (let i = 0; i < currentPolygon.length; i++) {
+                px = xToCanvas(currentPolygon[i][0], canvas);
+                py = yToCanvas(currentPolygon[i][1], canvas);
+                ctx.beginPath();
+                ctx.arc(px, py, 4, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+        }
+        
+        // Start polygon drawing mode
+        function startDrawing() {
+            console.log("Starting drawing mode");
+            drawingMode = true;
+            currentPolygon = [];
+            
+            document.getElementById("drawing-status").style.display = "block";
+            document.getElementById("start-drawing-btn").classList.add("btn-active");
+            document.getElementById("finish-drawing-btn").classList.remove("btn-active");
+            document.getElementById("cancel-drawing-btn").classList.remove("btn-active");
+            
+            updatePolygonCoords();
+            updateButtonStates();
+            updateDebugInfo("Drawing mode started: drawingMode = " + drawingMode);
+        }
+        
+        // Finish polygon drawing
+        function finishDrawing() {
+            console.log("Finishing drawing...");
+            console.log("Current polygon points: " + currentPolygon.length);
+            
+            if (currentPolygon.length < 3) {
+                alert("Please add at least 3 points to create a polygon");
+                return;
+            }
+            
+            // Create a deep copy of the current polygon
+            let newPolygon = [];
+            for (let i = 0; i < currentPolygon.length; i++) {
+                newPolygon.push([...currentPolygon[i]]);
+            }
+            
+            // Add closing point to match the first point
+            if (newPolygon[0][0] !== newPolygon[newPolygon.length-1][0] || 
+                newPolygon[0][1] !== newPolygon[newPolygon.length-1][1]) {
+                newPolygon.push([...newPolygon[0]]);
+            }
+            
+            console.log("Adding new polygon to shapes array");
+            console.log(newPolygon);
+            
+            // Add the new polygon to the shapes array
+            shapes.push(newPolygon);
+            
+            // Reset drawing mode
+            console.log("Resetting drawing mode");
+            drawingMode = false;
+            currentPolygon = [];
+            
+            document.getElementById("drawing-status").style.display = "none";
+            document.getElementById("start-drawing-btn").classList.remove("btn-active");
+            document.getElementById("finish-drawing-btn").classList.remove("btn-active");
+            document.getElementById("cancel-drawing-btn").classList.remove("btn-active");
+            
+            // Clear polygon coordinates display
+            updatePolygonCoords();
+            updateButtonStates();
+            
+            // Redraw the canvas
+            drawPlot();
+            
+            console.log("Drawing finished. Drawing mode is now: " + drawingMode);
+            console.log("Shapes array now has " + shapes.length + " shapes");
+        }
+        
+        // Cancel polygon drawing
+        function cancelDrawing() {
+            drawingMode = false;
+            currentPolygon = [];
+            document.getElementById("drawing-status").style.display = "none";
+            document.getElementById("start-drawing-btn").classList.remove("btn-active");
+            document.getElementById("finish-drawing-btn").classList.remove("btn-active");
+            document.getElementById("cancel-drawing-btn").classList.remove("btn-active");
+            updatePolygonCoords();
+            updateButtonStates();
+            
+            // Redraw the canvas
+            drawPlot();
+        }
+        
+        // Update polygon coordinates display
+        function updatePolygonCoords() {
+            var textarea = document.getElementById("polygon-coords");
+            if (currentPolygon.length === 0) {
+                textarea.value = "";
+                return;
+            }
+            
+            // Format coordinates for display
+            var formatted = "[\n";
+            for (let i = 0; i < currentPolygon.length; i++) {
+                formatted += "  [" + currentPolygon[i][0] + ", " + currentPolygon[i][1] + "]";
+                if (i < currentPolygon.length - 1) {
+                    formatted += ",";
+                }
+                formatted += "\n";
+            }
+            formatted += "]";
+            
+            textarea.value = formatted;
+        }
+        
+        // Copy polygon coordinates to clipboard
+        function copyToClipboard() {
+            var textarea = document.getElementById("polygon-coords");
+            textarea.select();
+            document.execCommand("copy");
+        }
+        
+        // Update button states based on drawing mode
+        function updateButtonStates() {
+            document.getElementById("start-drawing-btn").disabled = drawingMode;
+            document.getElementById("finish-drawing-btn").disabled = !drawingMode;
+            document.getElementById("cancel-drawing-btn").disabled = !drawingMode;
+        }
+
+        function checkVertex(x, y, imgWidth, imgHeight) {
+            var minDistance = 8;
+            var found = false;
+            for (var shape of shapes) {
+                for (var vertex of shape) {
+                    var vx = (vertex[0] + xMax) / (2 * xMax) * imgWidth;
+                    var vy = (yMax - vertex[1]) / (2 * yMax) * imgHeight;
+                    var distance = Math.sqrt((x - vx) ** 2 + (y - vy) ** 2);
+                    if (distance < minDistance) {
+                        var coordText = " X: " + vertex[0].toFixed(2) + " Y: " + vertex[1].toFixed(2);
+                        document.getElementById("vertex_coord_values").innerText = coordText;
+                        found = true;
+                        break;
+                    }
+                }
+                if (found) break;
+            }
+            if (!found) {
+                document.getElementById("vertex_coord_values").innerText = " X: - Y: -";
+            }
+        }
+        
+        // Function to switch language
+        function switchLanguage() {
+            currentLanguage = currentLanguage === "ka" ? "en" : "ka";
+            updateLanguage();
+        }
+        
+        // Function to update all text content based on selected language
+        function updateLanguage() {
+            // Update all elements with ka and en attributes
+            document.querySelectorAll("a[ka][en]").forEach(element => {
+                element.textContent = element.getAttribute(currentLanguage);
+            });
+            
+            // Update document title
+            const titleElement = document.querySelector("title");
+            if (titleElement && titleElement.hasAttribute("ka") && titleElement.hasAttribute("en")) {
+                titleElement.textContent = titleElement.getAttribute(currentLanguage);
+            }
+			
+			// Reprocess mathematics after language change
+			if (typeof MathJax !== 'undefined') {
+				MathJax.Hub.Queue(["Typeset", MathJax.Hub]);
+			}
+
+        }
+
+        // Initialize everything when the page loads
+        function init() {
+            // Set initial language elements
+            updateLanguage();
+            
+            // Draw the plot
+            drawPlot();
+        }
+    </script>
+</head>
+<body onload="init()">
+    <a ka="გადართვა ინგლისურზე" en="Switch to Georgian" id="language-switch" class="language-switch" onclick="switchLanguage()">გადართვა ინგლისურზე</a>
+    
+    <h2><a ka="დავალება" en="Task">დავალება</a></h2>
+	<p class="formula"><a ka="მოცემულია ორი ფუნქცია $f_1=x$ და $f_2=x^3$." 
+	en="Given two functions $f_1=x$ and $f_2=x^3$.">მოცემულია ორი ფუნქცია $f_1=x$ და $f_2=x^3$.</a></p>
+	<p class="formula"><a ka="1. ააგეთ ფუნქციების გრაფიკები (1 ქულა)" 
+	en="1. Draw the graphs of the functions (1 point)">1. ააგეთ ფუნქციების გრაფიკები (1 ქულა)</a></p>
+   
+	<p class="formula"><a ka="2. იპოვეთ ამ გრაფიკებით შემოსაზღვრული ფიგურის ($a$-ს) ფართობი. (1 ქულა)." 
+	en="2. Find the area of a region figure $a$ between the two graphs. (1 point).">2. იპოვეთ ამ გრაფიკებით შემოსაზღვრული ფიგურის ($a$-ს) ფართობი. (1 ქულა).</a></p>
+	<p class="formula"><a ka="3. იპოვეთ ნახაზზე გამოსახული ყველა ფიგურა, რომელთა თანაკვეთა $a$ -სთან არაცარიელი სიმრავლეა. მიღებული ფიგურები აღწერეთ მათი წვეროების მითითებით. ამ ფიგურებისთვის მიუთითეთ, რომელ მათგანს აქვს მხოლოდ ერთი, ან ერთზე მეტი  საერთო წერტილი  $a$-სთან. (1 ქულა)." en="Find all the figures shown in the diagram whose intersection with $a$ is a non-empty set. Describe each such figure by listing its vertices. For those figures, indicate which ones have exactly one common point with $a$, and which ones have more than one common point with $a$. (1 point).">3. იპოვეთ ნახაზზე გამოსახული ყველა ფიგურა, რომელთა თანაკვეთა $a$ -სთან არაცარიელი სიმრავლეა. მიღებული ფიგურები აღწერეთ მათი წვეროების მითითებით. ამ ფიგურებისთვის მიუთითეთ, რომელ მათგანს აქვს მხოლოდ ერთი, ან ერთზე მეტი  საერთო წერტილი  $a$-სთან. (1 ქულა).</a></p>
+	
+    <p><a ka="კურსორის მოძრაობით იხილავთ კოორდინატებს და წვეროების ზუსტ მდებარეობას." en="Hover over the plot to see coordinates and exact vertex locations.">კურსორის მოძრაობით იხილავთ კოორდინატებს და წვეროების ზუსტ მდებარეობას.</a></p>
+    
+   <p id="coords">X: 0 Y: 0</p>
+    
+    <p id="vertex_coords"><a ka="წვერო" en="Vertex">წვერო</a><span id="vertex_coord_values"> X: - Y: -</span></p>
+    
+    <canvas id="plotCanvas" width="600" height="600" onmousemove="showCoords(event)" onclick="canvasClick(event)"></canvas>
+    
+    <!-- Admin Panel -->
+    <div id="admin-panel" class="admin-panel">
+        <h3><a ka="ადმინისტრატორის პანელი" en="Admin Panel">ადმინისტრატორის პანელი</a></h3>
+        
+        <button id="start-drawing-btn" class="btn" onclick="startDrawing()"><a ka="დაიწყე ხატვა" en="Start Drawing">დაიწყე ხატვა</a></button>
+        <button id="finish-drawing-btn" class="btn" onclick="finishDrawing()"><a ka="დაასრულე ხატვა" en="Finish Drawing">დაასრულე ხატვა</a></button>
+        <button id="cancel-drawing-btn" class="btn" onclick="cancelDrawing()"><a ka="გააუქმე ხატვა" en="Cancel Drawing">გააუქმე ხატვა</a></button>
+        
+        <p id="drawing-status" style="display: none; color: blue;"><a ka="დააწკაპუნეთ ტილოზე წვეროს დასამატებლად" en="Click on the canvas to add vertices">დააწკაპუნეთ ტილოზე წვეროს დასამატებლად</a></p>
+        
+        <p><a ka="პოლიგონის კოორდინატები:" en="Polygon Coordinates:">პოლიგონის კოორდინატები:</a></p>
+        
+        <textarea id="polygon-coords" readonly></textarea>
+        
+        <button id="copy-btn" class="btn" onclick="copyToClipboard()"><a ka="დააკოპირე" en="Copy">დააკოპირე</a></button>
+        
+        <p id="debug-info" style="font-family: monospace; font-size: 12px;"></p>
+    </div>
+	<script>
+        // ფუნქცია, რომელიც საშუალებას მოგვცემს მონაცემების დინამიურად დამატებას
+        function addFormula(formula, description) {
+            const functionsListDiv = document.querySelector('.functions-list');
+            const newFormulaDiv = document.createElement('div');
+            newFormulaDiv.className = 'function-item';
+            
+            const formulaText = description ? 
+                `<p class="formula">${description}: $${formula}$</p>` : 
+                `<p class="formula">$${formula}$</p>`;
+                
+            newFormulaDiv.innerHTML = formulaText;
+            functionsListDiv.appendChild(newFormulaDiv);
+            
+            // გადატვირთვა MathJax-ის, რომ ახალი ფორმულები დამუშავდეს
+            MathJax.Hub.Queue(["Typeset", MathJax.Hub, newFormulaDiv]);
+        }
+
+        // ფორმულის დამატების მაგალითი (შეგიძლიათ გამოიყენოთ კონსოლიდან ან სხვა ივენთებში)
+        // addFormula("\\int_{a}^{b} f(x) \\, dx", "განსაზღვრული ინტეგრალი");
+    </script>	
+</body>
+</html>

@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title ka="კორელაცია" en="Correlation">კორელაცია</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+            tex2jax: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            }
+        });
+    </script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #555;
+            margin-bottom: 30px;
+        }
+        #graph-container {
+            position: relative;
+            margin: 20px auto;
+            border: 1px solid #ddd;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+        }
+        .coordinates {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 5px 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+        }
+        .point-info {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 5px 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+        }
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .language-switch {
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="controls">
+            <div class="info">
+                <a ka="დავალება" en="Task">დავალება</a>
+            </div>
+            <div class="language-switch">
+                <button id="lang-switch" onclick="switchLanguage()">
+                    <span ka="English" en="ქართული">English</span>
+                </button>
+            </div>
+        </div>
+        
+        <h1 ka="კორელაცია" en="Correlation">კორელაცია</h1>
+        <p class="subtitle" ka="მოცემული მონცემებისთვის გამოვთვალოთ კორელაცია" en="Let's calculate correlation for the given data">მოცემული მონცემებისთვის გამოვთვალოთ კორელაცია</p>
+        
+        <div id="graph-container">
+            <canvas id="correlation-canvas"></canvas>
+            <div class="coordinates" id="mouse-coordinates"></div>
+            <div class="point-info" id="point-info"></div>
+        </div>
+    </div>
+
+    <script>
+        // Language settings
+        let currentLanguage = "ka";
+        
+        // Function to switch language
+        function switchLanguage() {
+            currentLanguage = currentLanguage === "ka" ? "en" : "ka";
+            updateLanguage();
+        }
+        
+        // Function to update all text content based on selected language
+        function updateLanguage() {
+            // Update all elements with ka and en attributes
+            document.querySelectorAll("[ka][en]").forEach(element => {
+                element.textContent = element.getAttribute(currentLanguage);
+            });
+            
+            // Update document title
+            const titleElement = document.querySelector("title");
+            if (titleElement && titleElement.hasAttribute("ka") && titleElement.hasAttribute("en")) {
+                titleElement.textContent = titleElement.getAttribute(currentLanguage);
+            }
+            
+            // Reprocess mathematics after language change
+            if (typeof MathJax !== 'undefined') {
+                MathJax.Hub.Queue(["Typeset", MathJax.Hub]);
+            }
+            
+            // Redraw canvas with updated labels
+            drawGraph();
+        }
+
+        // Constants and configuration
+        const config = {
+            canvasWidth: 800,
+            canvasHeight: 600,
+            paddingX: 50,
+            paddingY: 50,
+            xMin: -10,
+            xMax: 10,
+            yMin: -10,
+            yMax: 10,
+            gridColor: 'rgba(0, 0, 0, 0.1)',
+            axisColor: 'rgba(0, 0, 0, 0.8)',
+            xPointsColor: '#4CAF50',  // Green for X-axis
+            yPointsColor: '#F44336',  // Red for Y-axis
+            dataPointsColor: '#2196F3',  // Blue for data points
+            pointHighlightDistance: 15,
+            pointSize: 5
+        };
+        
+        // Data points
+        const data = {
+            x: [-8.4, -6.7, -4.9, -2.3, 0.4, 2.3, 4.1, 6.6, 8.4],
+            y: [-2.1, -2.3, -3.5, -1.6, 2.7, 3.4, 5.7, 7, 9.2]
+        };
+        
+        // Canvas setup
+        const container = document.getElementById('graph-container');
+        container.style.width = config.canvasWidth + 'px';
+        container.style.height = config.canvasHeight + 'px';
+        
+        const canvas = document.getElementById('correlation-canvas');
+        canvas.width = config.canvasWidth;
+        canvas.height = config.canvasHeight;
+        const ctx = canvas.getContext('2d');
+        
+        // Coordinate display elements
+        const mouseCoordinates = document.getElementById('mouse-coordinates');
+        const pointInfo = document.getElementById('point-info');
+        
+        // Conversion functions between canvas and graph coordinates
+        function canvasToGraphX(canvasX) {
+            return ((canvasX - config.paddingX) / (config.canvasWidth - 2 * config.paddingX)) * (config.xMax - config.xMin) + config.xMin;
+        }
+        
+        function canvasToGraphY(canvasY) {
+            return ((config.canvasHeight - canvasY - config.paddingY) / (config.canvasHeight - 2 * config.paddingY)) * (config.yMax - config.yMin) + config.yMin;
+        }
+        
+        function graphToCanvasX(graphX) {
+            return ((graphX - config.xMin) / (config.xMax - config.xMin)) * (config.canvasWidth - 2 * config.paddingX) + config.paddingX;
+        }
+        
+        function graphToCanvasY(graphY) {
+            return config.canvasHeight - (((graphY - config.yMin) / (config.yMax - config.yMin)) * (config.canvasHeight - 2 * config.paddingY) + config.paddingY);
+        }
+        
+        // Drawing functions
+        function drawGrid() {
+            ctx.strokeStyle = config.gridColor;
+            ctx.lineWidth = 1;
+            
+            // Draw vertical grid lines
+            for (let x = Math.ceil(config.xMin); x <= config.xMax; x++) {
+                const canvasX = graphToCanvasX(x);
+                ctx.beginPath();
+                ctx.moveTo(canvasX, config.paddingY);
+                ctx.lineTo(canvasX, config.canvasHeight - config.paddingY);
+                ctx.stroke();
+            }
+            
+            // Draw horizontal grid lines
+            for (let y = Math.ceil(config.yMin); y <= config.yMax; y++) {
+                const canvasY = graphToCanvasY(y);
+                ctx.beginPath();
+                ctx.moveTo(config.paddingX, canvasY);
+                ctx.lineTo(config.canvasWidth - config.paddingX, canvasY);
+                ctx.stroke();
+            }
+        }
+        
+        function drawAxes() {
+            ctx.strokeStyle = config.axisColor;
+            ctx.lineWidth = 2;
+            ctx.font = '14px Arial';
+            ctx.fillStyle = 'black';
+            
+            // X-axis
+            ctx.beginPath();
+            ctx.moveTo(config.paddingX, graphToCanvasY(0));
+            ctx.lineTo(config.canvasWidth - config.paddingX, graphToCanvasY(0));
+            ctx.stroke();
+            
+            // Y-axis
+            ctx.beginPath();
+            ctx.moveTo(graphToCanvasX(0), config.paddingY);
+            ctx.lineTo(graphToCanvasX(0), config.canvasHeight - config.paddingY);
+            ctx.stroke();
+            
+            // X-axis label
+            const xLabel = currentLanguage === "ka" ? "X ღერძი" : "X Axis";
+            ctx.fillText(xLabel, config.canvasWidth - config.paddingX + 5, graphToCanvasY(0) + 15);
+            
+            // Y-axis label
+            const yLabel = currentLanguage === "ka" ? "Y ღერძი" : "Y Axis";
+            ctx.fillText(yLabel, graphToCanvasX(0) - 40, config.paddingY - 10);
+            
+            // X-axis ticks and values
+            for (let x = Math.ceil(config.xMin); x <= config.xMax; x++) {
+                if (x === 0) continue; // Skip zero (axis intersection)
+                
+                const canvasX = graphToCanvasX(x);
+                ctx.beginPath();
+                ctx.moveTo(canvasX, graphToCanvasY(0) - 5);
+                ctx.lineTo(canvasX, graphToCanvasY(0) + 5);
+                ctx.stroke();
+                ctx.fillText(x.toString(), canvasX - 5, graphToCanvasY(0) + 20);
+            }
+            
+            // Y-axis ticks and values
+            for (let y = Math.ceil(config.yMin); y <= config.yMax; y++) {
+                if (y === 0) continue; // Skip zero (axis intersection)
+                
+                const canvasY = graphToCanvasY(y);
+                ctx.beginPath();
+                ctx.moveTo(graphToCanvasX(0) - 5, canvasY);
+                ctx.lineTo(graphToCanvasX(0) + 5, canvasY);
+                ctx.stroke();
+                ctx.fillText(y.toString(), graphToCanvasX(0) - 25, canvasY + 5);
+            }
+        }
+        
+        function drawDataPoints() {
+            // Draw points on X-axis
+            ctx.fillStyle = config.xPointsColor;
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 1.5;
+            
+            for (let i = 0; i < data.x.length; i++) {
+                const x = data.x[i];
+                const canvasX = graphToCanvasX(x);
+                const canvasY = graphToCanvasY(0);
+                
+                ctx.beginPath();
+                ctx.arc(canvasX, canvasY, config.pointSize, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            }
+            
+            // Draw points on Y-axis
+            ctx.fillStyle = config.yPointsColor;
+            
+            for (let i = 0; i < data.y.length; i++) {
+                const y = data.y[i];
+                const canvasX = graphToCanvasX(0);
+                const canvasY = graphToCanvasY(y);
+                
+                ctx.beginPath();
+                ctx.arc(canvasX, canvasY, config.pointSize, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            }
+            
+            // Draw data points in coordinate plane
+            ctx.fillStyle = config.dataPointsColor;
+            
+            for (let i = 0; i < data.x.length; i++) {
+                const x = data.x[i];
+                const y = data.y[i];
+                const canvasX = graphToCanvasX(x);
+                const canvasY = graphToCanvasY(y);
+                
+                ctx.beginPath();
+                ctx.arc(canvasX, canvasY, config.pointSize, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            }
+        }
+        
+        function drawGraph() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawGrid();
+            drawAxes();
+            drawDataPoints();
+        }
+        
+        // Event handlers
+        canvas.addEventListener('mousemove', function(event) {
+            const rect = canvas.getBoundingClientRect();
+            const canvasX = event.clientX - rect.left;
+            const canvasY = event.clientY - rect.top;
+            
+            const graphX = canvasToGraphX(canvasX);
+            const graphY = canvasToGraphY(canvasY);
+            
+            // Display mouse coordinates
+            const coordText = currentLanguage === "ka" ? 
+                `x: ${graphX.toFixed(2)}, y: ${graphY.toFixed(2)}` : 
+                `x: ${graphX.toFixed(2)}, y: ${graphY.toFixed(2)}`;
+            mouseCoordinates.textContent = coordText;
+            
+            // Check data points for highlighting
+            let highlightedPoint = null;
+            let closestDistance = Infinity;
+            
+            for (let i = 0; i < data.x.length; i++) {
+                const x = data.x[i];
+                const y = data.y[i];
+                const pointCanvasX = graphToCanvasX(x);
+                const pointCanvasY = graphToCanvasY(y);
+                
+                const distance = Math.sqrt(
+                    Math.pow(canvasX - pointCanvasX, 2) + 
+                    Math.pow(canvasY - pointCanvasY, 2)
+                );
+                
+                if (distance < config.pointHighlightDistance && distance < closestDistance) {
+                    closestDistance = distance;
+                    highlightedPoint = { x, y, index: i };
+                }
+            }
+            
+            // Redraw the graph
+            drawGraph();
+            
+            // Highlight the closest data point if any
+            if (highlightedPoint) {
+                const x = highlightedPoint.x;
+                const y = highlightedPoint.y;
+                const pointX = graphToCanvasX(x);
+                const pointY = graphToCanvasY(y);
+                const xAxisPointX = graphToCanvasX(x);
+                const xAxisPointY = graphToCanvasY(0);
+                const yAxisPointX = graphToCanvasX(0);
+                const yAxisPointY = graphToCanvasY(y);
+                
+                // Highlight data point
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(pointX, pointY, config.pointSize + 4, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Highlight x-axis point
+                ctx.strokeStyle = config.xPointsColor;
+                ctx.beginPath();
+                ctx.arc(xAxisPointX, xAxisPointY, config.pointSize + 4, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Highlight y-axis point
+                ctx.strokeStyle = config.yPointsColor;
+                ctx.beginPath();
+                ctx.arc(yAxisPointX, yAxisPointY, config.pointSize + 4, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Display point info
+                const infoText = currentLanguage === "ka" ?
+                    `მონაცემი: (${x}, ${y})` :
+                    `Data point: (${x}, ${y})`;
+                pointInfo.textContent = infoText;
+            } else {
+                pointInfo.textContent = '';
+            }
+        });
+        
+        // Initial drawing
+        drawGraph();
+    </script>
+</body>
+</html>
